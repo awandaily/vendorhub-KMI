@@ -1586,9 +1586,9 @@
 
     // ⚠️ Isi dengan URL Web App Apps Script Anda (Deploy → Manage deployments → salin URL /exec).
     // Cuma dipakai kalau index.html ini dibuka DI LUAR Apps Script (misalnya di Vercel).
-    const APPS_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbypJsCj3lc3yvIHhwjIwx2fYfRjR60ApqjwvcIL6HjYCGeVNLaKinzaxBaTdJ4tCMAr/exec";
+    const APPS_SCRIPT_API_URL = "GANTI_DENGAN_URL_EXEC_APPS_SCRIPT_ANDA";
     // ⚠️ Harus SAMA PERSIS dengan CONFIG.API_SECRET di Code.gs Anda.
-    const API_SECRET = "vendorhub-kmi";
+    const API_SECRET = "GANTI_DENGAN_TEKS_RAHASIA_ACAK_ANDA_SENDIRI";
 
     const runGas = (func, ...args) => {
       return new Promise((resolve, reject) => {
@@ -2506,9 +2506,7 @@
             loading.value = true; loadingText.value = `Mengubah status ${selectedRows.value.size} vendor...`;
             try {
                 const indexes = vendors.value.filter(v => selectedRows.value.has(v.id)).map(v => v.rowIndex);
-                if (typeof google !== 'undefined' && typeof google.script !== 'undefined') {
-                    await runGas('bulkUpdateVendorsStatus', { rowIndexes: indexes, status: bulkStatusValue.value });
-                } else { await new Promise(r => setTimeout(r, 600)); }
+                await runGas('bulkUpdateVendorsStatus', { rowIndexes: indexes, status: bulkStatusValue.value });
                 showToast(`Status ${selectedRows.value.size} vendor berhasil diubah!`);
                 addLog('UPDATE_STATUS', `Mengubah status ${selectedRows.value.size} vendor menjadi ${bulkStatusValue.value}`);
                 selectedRows.value = new Set(); 
@@ -2946,50 +2944,40 @@
             let updateCount = 0; let createCount = 0;
             const BATCH_SIZE = 25; // FIX v12.93: kirim per-batch, bukan 1 request per baris
 
-            if (typeof google !== 'undefined' && typeof google.script !== 'undefined') {
-                for (let start = 0; start < itemsToProcess.length; start += BATCH_SIZE) {
-                    const chunk = itemsToProcess.slice(start, start + BATCH_SIZE);
-                    const batchPayload = chunk.map(item => {
+            for (let start = 0; start < itemsToProcess.length; start += BATCH_SIZE) {
+                const chunk = itemsToProcess.slice(start, start + BATCH_SIZE);
+                const batchPayload = chunk.map(item => {
+                    const p = item.payload;
+                    const savePayload = { ...p };
+                    savePayload.documents = JSON.stringify(savePayload.documents || {});
+                    if (!savePayload.formTimestamp) savePayload.formTimestamp = "";
+                    return savePayload;
+                });
+
+                try {
+                    const res = await runGas('bulkSaveVendorData', batchPayload);
+                    createCount += (res && res.created) || 0;
+                    updateCount += (res && res.updated) || 0;
+
+                    chunk.forEach((item, i) => {
                         const p = item.payload;
-                        const savePayload = { ...p };
-                        savePayload.documents = JSON.stringify(savePayload.documents || {});
-                        if (!savePayload.formTimestamp) savePayload.formTimestamp = "";
-                        return savePayload;
+                        const hpStr = String(p.hp || '-'); const tempHp = hpStr.startsWith("'") ? hpStr.substring(1) : hpStr;
+                        const phoneStr = String(p.phone || '-'); const tempPhone = phoneStr.startsWith("'") ? phoneStr.substring(1) : phoneStr;
+                        const faxStr = String(p.fax || '-'); const tempFax = faxStr.startsWith("'") ? faxStr.substring(1) : faxStr;
+
+                        if (item.action === 'create') {
+                            vendors.value.unshift({ id: 'temp_' + (start + i), ...p, hp: tempHp, phone: tempPhone, fax: tempFax, formTimestamp: p.formTimestamp || "" });
+                        } else {
+                            const idx = vendors.value.findIndex(val => val.id === p.id);
+                            if (idx !== -1) vendors.value[idx] = { ...p, hp: tempHp, phone: tempPhone, fax: tempFax, documents: batchPayload[i].documents };
+                        }
                     });
-
-                    try {
-                        const res = await runGas('bulkSaveVendorData', batchPayload);
-                        createCount += (res && res.created) || 0;
-                        updateCount += (res && res.updated) || 0;
-
-                        chunk.forEach((item, i) => {
-                            const p = item.payload;
-                            const hpStr = String(p.hp || '-'); const tempHp = hpStr.startsWith("'") ? hpStr.substring(1) : hpStr;
-                            const phoneStr = String(p.phone || '-'); const tempPhone = phoneStr.startsWith("'") ? phoneStr.substring(1) : phoneStr;
-                            const faxStr = String(p.fax || '-'); const tempFax = faxStr.startsWith("'") ? faxStr.substring(1) : faxStr;
-
-                            if (item.action === 'create') {
-                                vendors.value.unshift({ id: 'temp_' + (start + i), ...p, hp: tempHp, phone: tempPhone, fax: tempFax, formTimestamp: p.formTimestamp || "" });
-                            } else {
-                                const idx = vendors.value.findIndex(val => val.id === p.id);
-                                if (idx !== -1) vendors.value[idx] = { ...p, hp: tempHp, phone: tempPhone, fax: tempFax, documents: batchPayload[i].documents };
-                            }
-                        });
-                    } catch (errBatch) {
-                        console.error(`Gagal menyimpan batch mulai baris ${start}:`, errBatch);
-                        showToast(`Error pada batch ke-${Math.floor(start / BATCH_SIZE) + 1}: ${errBatch.message || errBatch}`, 'error');
-                    }
-
-                    importProgress.value = Math.min(start + BATCH_SIZE, itemsToProcess.length);
+                } catch (errBatch) {
+                    console.error(`Gagal menyimpan batch mulai baris ${start}:`, errBatch);
+                    showToast(`Error pada batch ke-${Math.floor(start / BATCH_SIZE) + 1}: ${errBatch.message || errBatch}`, 'error');
                 }
-            } else {
-                // Mock mode (tanpa Apps Script)
-                for (let i = 0; i < itemsToProcess.length; i++) {
-                    importProgress.value = i + 1;
-                    const p = itemsToProcess[i].payload;
-                    if (itemsToProcess[i].action === 'create') vendors.value.unshift({ id: 'mock_' + i, ...p });
-                    await new Promise(r => setTimeout(r, 100));
-                }
+
+                importProgress.value = Math.min(start + BATCH_SIZE, itemsToProcess.length);
             }
 
             isImporting.value = false; 
