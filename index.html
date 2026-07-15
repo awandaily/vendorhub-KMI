@@ -161,47 +161,45 @@
           </div>
         </div>
         
-        <nav class="flex-1 px-4 py-6 space-y-1.5 relative z-10 overflow-y-auto custom-scrollbar">
-          <button v-if="hasMenuAccess('dashboard')" @click="activeTab = 'dashboard'" :class="['w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 group', activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
-            <i class="ph ph-squares-four text-xl" :class="activeTab === 'dashboard' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Dashboard
+        <nav class="flex-1 px-3 py-4 space-y-0.5 relative z-10 overflow-y-auto custom-scrollbar min-h-0">
+          <button v-if="hasMenuAccess('dashboard')" @click="activeTab = 'dashboard'" :class="['w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group', activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
+            <i class="ph ph-squares-four text-lg" :class="activeTab === 'dashboard' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Dashboard
           </button>
-          <button v-if="hasMenuAccess('vendors')" @click="activeTab = 'vendors'" :class="['w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 group', activeTab === 'vendors' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
-            <i class="ph ph-database text-xl" :class="activeTab === 'vendors' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Data Vendor
+          <button v-if="hasMenuAccess('vendors')" @click="activeTab = 'vendors'" :class="['w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group', activeTab === 'vendors' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
+            <i class="ph ph-database text-lg" :class="activeTab === 'vendors' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Data Vendor
           </button>
-          <button v-if="hasMenuAccess('dokumen')" @click="activeTab = 'dokumen'" :class="['w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 group', activeTab === 'dokumen' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
-            <i class="ph ph-shield-check text-xl" :class="activeTab === 'dokumen' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Dokumen Legal
+          <button v-if="hasMenuAccess('dokumen')" @click="activeTab = 'dokumen'" :class="['w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group', activeTab === 'dokumen' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
+            <i class="ph ph-shield-check text-lg" :class="activeTab === 'dokumen' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Dokumen Legal
           </button>
-          <button v-if="hasMenuAccess('broadcast')" @click="activeTab = 'broadcast'" :class="['w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 group', activeTab === 'broadcast' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
-            <i class="ph ph-megaphone text-xl" :class="activeTab === 'broadcast' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Broadcast
+          <button v-if="hasMenuAccess('broadcast')" @click="activeTab = 'broadcast'" :class="['w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group', activeTab === 'broadcast' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
+            <i class="ph ph-megaphone text-lg" :class="activeTab === 'broadcast' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Broadcast
           </button>
-          <button v-if="hasMenuAccess('import')" @click="activeTab = 'import'" :class="['w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 group', activeTab === 'import' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
-            <i class="ph ph-arrows-down-up text-xl" :class="activeTab === 'import' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Import & Export
+          <button v-if="hasMenuAccess('import')" @click="activeTab = 'import'" :class="['w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group', activeTab === 'import' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
+            <i class="ph ph-arrows-down-up text-lg" :class="activeTab === 'import' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Import & Export
           </button>
-          <button v-if="hasMenuAccess('logs')" @click="activeTab = 'logs'" :class="['w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 group', activeTab === 'logs' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
-            <i class="ph ph-activity text-xl" :class="activeTab === 'logs' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Log Aktivitas
+          <button v-if="hasMenuAccess('logs')" @click="activeTab = 'logs'" :class="['w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group', activeTab === 'logs' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
+            <i class="ph ph-activity text-lg" :class="activeTab === 'logs' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Log Aktivitas
           </button>
-          <button v-if="hasMenuAccess('reminder')" @click="activeTab = 'reminder'" :class="['w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 group', activeTab === 'reminder' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
-            <i class="ph ph-bell-ringing text-xl" :class="activeTab === 'reminder' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Reminder Email
+          <button v-if="hasMenuAccess('reminder')" @click="activeTab = 'reminder'" :class="['w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group', activeTab === 'reminder' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
+            <i class="ph ph-bell-ringing text-lg" :class="activeTab === 'reminder' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Reminder Email
           </button>
-          <button v-if="hasMenuAccess('pengaturan')" @click="activeTab = 'pengaturan'" :class="['w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 group', activeTab === 'pengaturan' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
-            <i class="ph ph-gear text-xl" :class="activeTab === 'pengaturan' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Pengaturan Sistem
+          <button v-if="hasMenuAccess('pengaturan')" @click="activeTab = 'pengaturan'" :class="['w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group', activeTab === 'pengaturan' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
+            <i class="ph ph-gear text-lg" :class="activeTab === 'pengaturan' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Pengaturan Sistem
           </button>
-          <button v-if="hasMenuAccess('akses')" @click="activeTab = 'akses'" :class="['w-full flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all duration-200 group', activeTab === 'akses' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
-            <i class="ph ph-users-three text-xl" :class="activeTab === 'akses' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Manajemen Akses
+          <button v-if="hasMenuAccess('akses')" @click="activeTab = 'akses'" :class="['w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 group', activeTab === 'akses' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white']">
+            <i class="ph ph-users-three text-lg" :class="activeTab === 'akses' ? 'text-indigo-100' : 'group-hover:text-indigo-400'"></i> Manajemen Akses
           </button>
         </nav>
         
-        <div class="p-4 relative z-10 mt-auto">
-          <div class="bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-sm">
-            <div class="flex items-center gap-3 mb-3">
-              <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold border-2 border-slate-800">{{ (currentUser?.username || 'AD').slice(0,2).toUpperCase() }}</div>
-              <div class="text-left">
-                <p class="text-sm font-semibold text-white leading-tight">{{ currentUser?.username || 'Administrator' }}</p>
-                <p class="text-xs text-slate-400">{{ currentUser?.roleName || 'Purchasing Dept.' }}</p>
-              </div>
+        <div class="p-3 relative z-10 shrink-0 border-t border-white/10">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-full bg-indigo-500 flex items-center justify-center text-white font-bold text-xs border-2 border-slate-800 shrink-0">{{ (currentUser?.username || 'AD').slice(0,2).toUpperCase() }}</div>
+            <div class="text-left flex-1 min-w-0">
+              <p class="text-sm font-semibold text-white leading-tight truncate">{{ currentUser?.username || 'Administrator' }}</p>
+              <p class="text-xs text-slate-400 truncate">{{ currentUser?.roleName || 'Purchasing Dept.' }}</p>
             </div>
-            <button @click="handleLogout" class="w-full flex items-center justify-center gap-2 py-2 text-sm text-rose-400 hover:text-white hover:bg-rose-500/20 rounded-lg transition-colors">
-              <i class="ph ph-sign-out"></i> Keluar
+            <button @click="handleLogout" title="Keluar" class="w-8 h-8 shrink-0 flex items-center justify-center text-rose-400 hover:text-white hover:bg-rose-500/20 rounded-lg transition-colors">
+              <i class="ph-bold ph-sign-out text-lg"></i>
             </button>
           </div>
         </div>
