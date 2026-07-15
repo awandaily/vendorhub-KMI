@@ -854,7 +854,7 @@
                 <div>
                   <label class="block text-sm font-bold text-slate-700 mb-1.5">Link Spreadsheet Hasil Google Form</label>
                   <div class="flex flex-col sm:flex-row gap-3">
-                    <input type="text" v-model="settings.form" placeholder="https://docs.google.com/spreadsheets/d/...." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                    <input type="text" v-model="settings.formUrl" placeholder="https://docs.google.com/spreadsheets/d/...." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     <button @click="handleFetchFormHeaders" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 px-5 py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
                       <i class="ph-bold ph-magnifying-glass"></i> Baca Kolom
                     </button>
@@ -876,8 +876,11 @@
                       <input type="checkbox" v-model="settings.hideDuplicate" class="w-5 h-5 rounded-[6px] border-2 border-slate-300 text-indigo-500 focus:ring-indigo-500/30 transition-all cursor-pointer peer appearance-none checked:border-indigo-500 checked:bg-indigo-500" />
                       <i class="ph-bold ph-check text-white absolute opacity-0 peer-checked:opacity-100 text-xs pointer-events-none"></i>
                     </div>
-                    <div>
-                      <span class="text-sm font-bold text-slate-800 block">Kelompokkan Vendor Duplikat (Grouping)</span>
+                    <div class="flex-1">
+                      <span class="text-sm font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+                        Kelompokkan Vendor Duplikat (Grouping)
+                        <span v-if="savedSettings" :class="['text-[10px] font-bold px-2 py-0.5 rounded-full border', savedSettings.hideDuplicate ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200']">{{ savedSettings.hideDuplicate ? 'AKTIF' : 'NONAKTIF' }}</span>
+                      </span>
                       <span class="text-xs text-slate-500 font-medium">Vendor dengan nama yang sama akan disatukan di bawah 1 data utama yang paling valid. Anda bisa mengklik tanda panah <i class="ph-bold ph-caret-down text-[10px]"></i> untuk membedah data mana saja yang duplikat.</span>
                     </div>
                   </label>
@@ -887,8 +890,11 @@
                       <input type="checkbox" v-model="settings.autoSyncDaily" class="w-5 h-5 rounded-[6px] border-2 border-slate-300 text-indigo-500 focus:ring-indigo-500/30 transition-all cursor-pointer peer appearance-none checked:border-indigo-500 checked:bg-indigo-500" />
                       <i class="ph-bold ph-check text-white absolute opacity-0 peer-checked:opacity-100 text-xs pointer-events-none"></i>
                     </div>
-                    <div>
-                      <span class="text-sm font-bold text-slate-800 block">Jalankan Auto-Sync Harian (Setiap Jam 20:00)</span>
+                    <div class="flex-1">
+                      <span class="text-sm font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+                        Jalankan Auto-Sync Harian (Setiap Jam 20:00)
+                        <span v-if="savedSettings" :class="['text-[10px] font-bold px-2 py-0.5 rounded-full border', savedSettings.autoSyncDaily ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200']">{{ savedSettings.autoSyncDaily ? 'AKTIF' : 'NONAKTIF' }}</span>
+                      </span>
                       <span class="text-xs text-slate-500 font-medium">Sistem akan berjalan di latar belakang server Google setiap jam 8 malam untuk menarik data dari Form. Anda tidak perlu membuka aplikasi.</span>
                     </div>
                   </label>
@@ -897,11 +903,18 @@
                       <input type="checkbox" v-model="settings.showStatusUpdate" class="w-5 h-5 rounded-[6px] border-2 border-slate-300 text-indigo-500 focus:ring-indigo-500/30 transition-all cursor-pointer peer appearance-none checked:border-indigo-500 checked:bg-indigo-500" />
                       <i class="ph-bold ph-check text-white absolute opacity-0 peer-checked:opacity-100 text-xs pointer-events-none"></i>
                     </div>
-                    <div>
-                      <span class="text-sm font-bold text-slate-800 block">Tampilkan Kolom "Status Update" di Data Vendor</span>
+                    <div class="flex-1">
+                      <span class="text-sm font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+                        Tampilkan Kolom "Status Update" di Data Vendor
+                        <span v-if="savedSettings" :class="['text-[10px] font-bold px-2 py-0.5 rounded-full border', savedSettings.showStatusUpdate ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200']">{{ savedSettings.showStatusUpdate ? 'AKTIF' : 'NONAKTIF' }}</span>
+                      </span>
                       <span class="text-xs text-slate-500 font-medium">Menampilkan tanggal update terakhir & badge VALID/RE-VALIDASI di tabel Data Vendor. Matikan jika Anda tidak ingin kolom ini terlihat.</span>
                     </div>
                   </label>
+                </div>
+
+                <div v-if="isSettingsDirty" class="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm font-semibold animate-fade-in">
+                  <i class="ph-fill ph-warning-circle text-lg shrink-0"></i> Ada perubahan yang belum disimpan. Klik "Simpan Pengaturan" untuk menerapkannya.
                 </div>
 
                 <button v-if="hasMenuAccess('pengaturan', 'full')" @click="saveAppConfig" class="w-full sm:w-auto bg-slate-900 hover:bg-indigo-600 text-white font-bold py-3.5 px-8 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 mt-4">
@@ -909,7 +922,7 @@
                 </button>
 
                 <!-- Tombol Sync Manual -->
-                <div v-if="settings.form" class="mt-6 p-4 sm:p-5 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div v-if="settings.formUrl" class="mt-6 p-4 sm:p-5 bg-indigo-50 border border-indigo-100 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
                     <h4 class="font-bold text-indigo-900 text-sm">Tarik Data Sekarang (Latar Belakang)</h4>
                     <p class="text-xs text-indigo-700/70 mt-0.5 font-medium">Ambil data dari Google Form tanpa memblokir layar aplikasi.</p>
@@ -967,8 +980,11 @@
                   <input type="checkbox" v-model="reminderSettings.enabled" class="w-5 h-5 rounded-[6px] border-2 border-slate-300 text-indigo-500 focus:ring-indigo-500/30 transition-all cursor-pointer peer appearance-none checked:border-indigo-500 checked:bg-indigo-500" />
                   <i class="ph-bold ph-check text-white absolute opacity-0 peer-checked:opacity-100 text-xs pointer-events-none"></i>
                 </div>
-                <div>
-                  <span class="text-sm font-bold text-slate-800 block">Aktifkan Reminder Otomatis Harian</span>
+                <div class="flex-1">
+                  <span class="text-sm font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+                    Aktifkan Reminder Otomatis Harian
+                    <span v-if="savedReminderSettings" :class="['text-[10px] font-bold px-2 py-0.5 rounded-full border', savedReminderSettings.enabled ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200']">{{ savedReminderSettings.enabled ? 'AKTIF' : 'NONAKTIF' }}</span>
+                  </span>
                   <span class="text-xs text-slate-500 font-medium">Sistem cek setiap jam 09:00 pagi dan kirim email ke vendor yang sudah waktunya diingatkan.</span>
                 </div>
               </label>
@@ -989,8 +1005,11 @@
                   <input type="checkbox" v-model="reminderSettings.preDueEnabled" class="w-5 h-5 rounded-[6px] border-2 border-slate-300 text-indigo-500 focus:ring-indigo-500/30 transition-all cursor-pointer peer appearance-none checked:border-indigo-500 checked:bg-indigo-500" />
                   <i class="ph-bold ph-check text-white absolute opacity-0 peer-checked:opacity-100 text-xs pointer-events-none"></i>
                 </div>
-                <div>
-                  <span class="text-sm font-bold text-slate-800 block">Kirim Peringatan Dini (H-1 Bulan)</span>
+                <div class="flex-1">
+                  <span class="text-sm font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+                    Kirim Peringatan Dini (H-1 Bulan)
+                    <span v-if="savedReminderSettings" :class="['text-[10px] font-bold px-2 py-0.5 rounded-full border', savedReminderSettings.preDueEnabled ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200']">{{ savedReminderSettings.preDueEnabled ? 'AKTIF' : 'NONAKTIF' }}</span>
+                  </span>
                   <span class="text-xs text-slate-500 font-medium">Kirim 1x email peringatan di bulan ke-5, sebelum data resmi berstatus RE-VALIDASI di bulan ke-6.</span>
                 </div>
               </label>
@@ -1016,6 +1035,10 @@
                 <textarea v-model="reminderSettings.body" rows="8" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all font-medium text-sm resize-y"></textarea>
               </div>
               <p class="text-xs text-slate-400 mb-6">Placeholder yang bisa dipakai di Subject/Body: <code class="bg-slate-100 px-1 rounded">&#123;&#123;perusahaan&#125;&#125;</code>, <code class="bg-slate-100 px-1 rounded">&#123;&#123;pic&#125;&#125;</code>, <code class="bg-slate-100 px-1 rounded">&#123;&#123;email&#125;&#125;</code>, <code class="bg-slate-100 px-1 rounded">&#123;&#123;tanggal_update&#125;&#125;</code>, <code class="bg-slate-100 px-1 rounded">&#123;&#123;hari_terlambat&#125;&#125;</code></p>
+
+              <div v-if="isReminderSettingsDirty" class="flex items-center gap-2 px-4 py-3 mb-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm font-semibold animate-fade-in">
+                <i class="ph-fill ph-warning-circle text-lg shrink-0"></i> Ada perubahan yang belum disimpan. Klik "Simpan Pengaturan Reminder" untuk menerapkannya.
+              </div>
 
               <button v-if="hasMenuAccess('reminder', 'full')" @click="saveReminderConfig" class="w-full sm:w-auto bg-slate-900 hover:bg-indigo-600 text-white font-bold py-3.5 px-8 rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
                 <i class="ph-bold ph-floppy-disk text-lg"></i> Simpan Pengaturan Reminder
@@ -1043,6 +1066,7 @@
                       <i class="ph-fill ph-user-gear text-indigo-500"></i>
                       <span class="font-bold text-slate-800">{{ role.roleName }}</span>
                       <span v-if="role.isSystemRole" class="text-[10px] font-bold px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">SISTEM</span>
+                      <span v-if="!role.isSystemRole && isRoleDirty(role)" class="text-[10px] font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full flex items-center gap-1"><i class="ph-fill ph-warning-circle"></i> Belum Disimpan</span>
                     </div>
                     <i class="ph-bold ph-caret-down transition-transform" :class="{'rotate-180': expandedRole === role.roleName}"></i>
                   </button>
@@ -1056,6 +1080,9 @@
                           <option value="full">Full CRUD</option>
                         </select>
                       </div>
+                    </div>
+                    <div v-if="!role.isSystemRole && isRoleDirty(role)" class="flex items-center gap-2 px-4 py-2.5 mt-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-xs font-semibold">
+                      <i class="ph-fill ph-warning-circle text-sm shrink-0"></i> Ada perubahan izin yang belum disimpan untuk role ini.
                     </div>
                     <div v-if="!role.isSystemRole" class="flex items-center gap-3 mt-5">
                       <button v-if="hasMenuAccess('akses', 'full')" @click="saveRoleForm(role)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-2">
@@ -1197,19 +1224,33 @@
 
               <!-- AUTO BACKUP SECTION -->
               <div class="md:col-span-2 bg-gradient-to-r from-indigo-900 to-slate-900 rounded-3xl p-8 shadow-xl flex flex-col sm:flex-row items-center justify-between group overflow-hidden relative">
-                 <div class="absolute inset-0 opacity-10" style="background-image: ('https://www.transparenttextures.com/patterns/cubes.png');"></div>
+                 <div class="absolute inset-0 opacity-10" style="background-image: url('https://www.transparenttextures.com/patterns/cubes.png');"></div>
                  <div class="flex items-center gap-6 relative z-10 mb-6 sm:mb-0">
                     <div class="w-16 h-16 bg-indigo-500/20 border border-indigo-400/30 rounded-2xl flex items-center justify-center text-indigo-300 shrink-0">
                       <i class="ph-fill ph-cloud-check text-4xl"></i>
                     </div>
                     <div class="text-left">
-                      <h3 class="text-xl font-bold text-white">Sistem Auto-Backup Cloud</h3>
-                      <p class="text-sm text-indigo-200 mt-1 max-w-lg">Mencegah kehilangan data. Sistem akan otomatis menyalin database ke folder <strong>"Backup VendorHub"</strong> di Google Drive Anda seminggu sekali tanpa perlu Anda klik apapun.</p>
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-xl font-bold text-white">Sistem Auto-Backup Cloud</h3>
+                        <span v-if="autoBackupStatus.loading" class="text-[10px] font-bold px-2 py-1 bg-white/10 text-slate-300 rounded-full">Mengecek status...</span>
+                        <span v-else-if="autoBackupStatus.enabled" class="text-[10px] font-bold px-2 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-full flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> AKTIF</span>
+                        <span v-else class="text-[10px] font-bold px-2 py-1 bg-rose-500/20 text-rose-300 border border-rose-400/30 rounded-full flex items-center gap-1"><i class="ph-fill ph-x-circle"></i> BELUM AKTIF</span>
+                      </div>
+                      <p class="text-sm text-indigo-200 mt-1 max-w-lg">Mencegah kehilangan data. Sistem akan otomatis menyalin database ke folder <strong>"Backup VendorHub"</strong> di Google Drive Anda setiap hari Minggu jam 2 pagi.</p>
+                      <p class="text-xs text-indigo-300/70 mt-2">
+                        <i class="ph-bold ph-clock-counter-clockwise"></i>
+                        Backup terakhir: <strong>{{ autoBackupStatus.lastBackup ? new Date(autoBackupStatus.lastBackup).toLocaleString('id-ID', {dateStyle:'long', timeStyle:'short'}) : 'Belum pernah ada backup' }}</strong>
+                      </p>
                     </div>
                  </div>
-                 <button v-if="hasMenuAccess('import', 'full')" @click="handleEnableAutoBackup" class="w-full sm:w-auto bg-indigo-500 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 relative z-10 whitespace-nowrap">
-                    <i class="ph-bold ph-clock-clockwise text-xl"></i> Aktifkan Auto-Backup
-                 </button>
+                 <div v-if="hasMenuAccess('import', 'full')" class="flex flex-col sm:items-end gap-2 relative z-10 w-full sm:w-auto">
+                   <button @click="handleEnableAutoBackup" class="w-full sm:w-auto text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 whitespace-nowrap" :class="autoBackupStatus.enabled ? 'bg-rose-500 hover:bg-rose-600' : 'bg-indigo-500 hover:bg-emerald-500'">
+                      <i class="ph-bold ph-clock-clockwise text-xl"></i> {{ autoBackupStatus.enabled ? 'Nonaktifkan Auto-Backup' : 'Aktifkan Auto-Backup' }}
+                   </button>
+                   <button @click="handleBackupNow" :disabled="isBackingUpNow" class="w-full sm:w-auto text-indigo-200 hover:text-white text-sm font-semibold py-2 px-4 rounded-xl transition-all flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50">
+                      <i class="ph-bold" :class="isBackingUpNow ? 'ph-circle-notch animate-spin' : 'ph-cloud-arrow-up'"></i> {{ isBackingUpNow ? 'Membuat backup...' : 'Backup Sekarang (Uji Coba)' }}
+                   </button>
+                 </div>
               </div>
 
             </div>
@@ -1584,11 +1625,11 @@
       }
     };
 
-    // ⚠️ Isi dengan  Web App Apps Script Anda (Deploy → Manage deployments → salin  /exec).
+    // ⚠️ Isi dengan URL Web App Apps Script Anda (Deploy → Manage deployments → salin URL /exec).
     // Cuma dipakai kalau index.html ini dibuka DI LUAR Apps Script (misalnya di Vercel).
-    const APPS_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbypJsCj3lc3yvIHhwjIwx2fYfRjR60ApqjwvcIL6HjYCGeVNLaKinzaxBaTdJ4tCMAr/exec";
+    const APPS_SCRIPT_API_URL = "GANTI_DENGAN_URL_EXEC_APPS_SCRIPT_ANDA";
     // ⚠️ Harus SAMA PERSIS dengan CONFIG.API_SECRET di Code.gs Anda.
-    const API_SECRET = "vendorhub-kmi";
+    const API_SECRET = "GANTI_DENGAN_TEKS_RAHASIA_ACAK_ANDA_SENDIRI";
 
     const runGas = (func, ...args) => {
       return new Promise((resolve, reject) => {
@@ -1702,6 +1743,8 @@
         const showEmailSuggestions = ref(false);
 
         const settings = ref({ formUrl: "", hideDuplicate: false, autoSyncDaily: false, showStatusUpdate: true, mappedColumns: { timestamp: "" } });
+        const savedSettings = ref(null); // snapshot TERSIMPAN di server, dipakai utk badge status AKTIF/NONAKTIF (bukan draft yg sedang diedit)
+        const isSettingsDirty = computed(() => savedSettings.value && JSON.stringify(settings.value) !== JSON.stringify(savedSettings.value));
 
         // === REMINDER EMAIL (v12.94) ===
         const reminderSettings = ref({
@@ -1710,6 +1753,8 @@
           subject: "Reminder: Update Data Legalitas Vendor - {{perusahaan}}",
           body: "Yth. Bapak/Ibu {{pic}},\n\nKami informasikan bahwa data legalitas perusahaan {{perusahaan}} yang terdaftar di sistem kami sudah tidak diperbarui sejak {{tanggal_update}} ({{hari_terlambat}} hari yang lalu).\n\nMohon kesediaannya untuk mengisi ulang formulir data vendor kami agar status legalitas perusahaan Anda tetap valid.\n\nTerima kasih atas kerja samanya.\n\nHormat kami,\nTim Purchasing"
         });
+        const savedReminderSettings = ref(null); // snapshot TERSIMPAN di server, dipakai utk badge status
+        const isReminderSettingsDirty = computed(() => savedReminderSettings.value && JSON.stringify(reminderSettings.value) !== JSON.stringify(savedReminderSettings.value));
         const reminderOverview = ref({ overdueCount: 0, preDueCount: 0, overdueList: [], preDueList: [] });
         const isSendingReminder = ref(false);
         const isSendingSingleReminder = ref(null); // menyimpan id vendor yang sedang dikirimi reminder
@@ -1843,6 +1888,7 @@
           loading.value = true;
           try {
             await runGas('saveSettings', settings.value);
+            savedSettings.value = JSON.parse(JSON.stringify(settings.value));
             showToast("Pengaturan disimpan!");
             addLog('PENGATURAN', `Memperbarui konfigurasi Integrasi & Deduplikasi`);
           } catch(e) { showToast(e, "error"); }
@@ -1859,7 +1905,7 @@
         const loadReminderConfig = async () => {
           try {
             const res = await runGas('loadReminderSettings');
-            if (res) reminderSettings.value = res;
+            if (res) { reminderSettings.value = res; savedReminderSettings.value = JSON.parse(JSON.stringify(res)); }
           } catch(e) { console.error('Gagal memuat pengaturan reminder:', e); }
         };
 
@@ -1867,6 +1913,7 @@
           loading.value = true;
           try {
             await runGas('saveReminderSettings', reminderSettings.value);
+            savedReminderSettings.value = JSON.parse(JSON.stringify(reminderSettings.value));
             showToast("Pengaturan reminder disimpan!");
             addLog('PENGATURAN', `Memperbarui konfigurasi Reminder Email`);
           } catch(e) { showToast(e, "error"); }
@@ -1943,12 +1990,17 @@
         const userForm = ref({ id: '', username: '', password: '', roleName: '', active: true });
 
         const emptyPermissions = () => { const p = {}; MENU_ORDER.forEach(m => p[m] = 'none'); return p; };
+        const roleSnapshots = ref({}); // snapshot izin TERSIMPAN per role, dipakai utk deteksi "belum disimpan"
+        const isRoleDirty = (role) => roleSnapshots.value[role.roleName] !== JSON.stringify(role.permissions);
 
         const loadAccessData = async () => {
           try {
             const res = await runGas('getUsersAndRoles');
             res.roles.forEach(r => { MENU_ORDER.forEach(m => { if (!r.permissions[m]) r.permissions[m] = 'none'; }); });
             accessData.value = res;
+            const snap = {};
+            res.roles.forEach(r => { snap[r.roleName] = JSON.stringify(r.permissions); });
+            roleSnapshots.value = snap;
           } catch (e) { showToast("Gagal memuat data Manajemen Akses: " + e, "error"); }
         };
 
@@ -2030,7 +2082,7 @@
           }
         });
 
-        watch(activeTab, (tab) => { if (tab === 'akses') loadAccessData(); });
+        watch(activeTab, (tab) => { if (tab === 'akses') loadAccessData(); if (tab === 'import') loadAutoBackupStatus(); });
 
         const duplicateEmailWarning = computed(() => {
            if (!formData.value.email || formData.value.email.length < 4 || formData.value.email === '-') return null;
@@ -2068,26 +2120,57 @@
             return Math.round((filled / total) * 100);
         };
 
+        const autoBackupStatus = ref({ loading: true, enabled: false, lastBackup: null });
+        const isBackingUpNow = ref(false);
+
+        const loadAutoBackupStatus = async () => {
+          autoBackupStatus.value.loading = true;
+          try {
+            const res = await runGas('getAutoBackupStatus');
+            autoBackupStatus.value = { loading: false, enabled: res.enabled, lastBackup: res.lastBackup };
+          } catch (e) {
+            autoBackupStatus.value.loading = false;
+            showToast("Gagal mengecek status Auto-Backup: " + e, "error");
+          }
+        };
+
         const handleEnableAutoBackup = () => {
+          const willEnable = !autoBackupStatus.value.enabled;
           openConfirm({
-            title: 'Aktifkan Auto-Backup',
-            message: 'Sistem akan otomatis menjadwalkan pencadangan ke Folder "Backup VendorHub" di Google Drive Anda setiap seminggu sekali tanpa perlu Anda klik apapun. Lanjutkan?',
+            title: willEnable ? 'Aktifkan Auto-Backup' : 'Nonaktifkan Auto-Backup',
+            message: willEnable
+              ? 'Sistem akan otomatis menjadwalkan pencadangan ke Folder "Backup VendorHub" di Google Drive Anda setiap hari Minggu jam 2 pagi, dan langsung membuat 1 backup sekarang juga. Lanjutkan?'
+              : 'Jadwal Auto-Backup mingguan akan dihentikan. Data yang sudah pernah di-backup tidak akan terhapus. Lanjutkan?',
             type: 'info',
-            confirmText: 'Ya, Aktifkan Backup',
+            confirmText: willEnable ? 'Ya, Aktifkan Backup' : 'Ya, Nonaktifkan',
             cancelText: 'Batal',
             onConfirm: async () => {
               loading.value = true;
-              loadingText.value = 'Menyiapkan sistem Cloud Backup...';
+              loadingText.value = willEnable ? 'Menyiapkan sistem Cloud Backup...' : 'Menonaktifkan Auto-Backup...';
               try {
-                await runGas('enableAutoBackup');
-                showToast("Auto-Backup Mingguan berhasil diaktifkan!", "success");
-                addLog('PENGATURAN', `Mengaktifkan fitur Auto-Backup Mingguan`);
+                await runGas(willEnable ? 'enableAutoBackup' : 'disableAutoBackup');
+                showToast(willEnable ? "Auto-Backup Mingguan berhasil diaktifkan! Backup pertama sudah dibuat." : "Auto-Backup dinonaktifkan.", "success");
+                addLog('PENGATURAN', willEnable ? 'Mengaktifkan fitur Auto-Backup Mingguan' : 'Menonaktifkan fitur Auto-Backup Mingguan');
+                await loadAutoBackupStatus();
               } catch (e) {
-                showToast("Gagal mengaktifkan Auto-Backup", "error");
+                showToast("Gagal mengubah status Auto-Backup: " + e, "error");
               }
               loading.value = false;
             }
           });
+        };
+
+        const handleBackupNow = async () => {
+          isBackingUpNow.value = true;
+          try {
+            await runGas('backupNow');
+            showToast('Backup berhasil dibuat! Cek folder "Backup VendorHub" di Google Drive Anda.', "success");
+            addLog('PENGATURAN', 'Membuat backup manual (uji coba)');
+            await loadAutoBackupStatus();
+          } catch (e) {
+            showToast("Gagal membuat backup: " + e, "error");
+          }
+          isBackingUpNow.value = false;
         };
 
         const isAllFiltersActive = computed(() => activeFilters.value.aktif && activeFilters.value.nonAktif && activeFilters.value.blacklist);
@@ -2386,7 +2469,7 @@
         const loadAppSettings = async () => {
           try {
             const savedSet = await runGas('loadSettings');
-            if (savedSet) settings.value = savedSet;
+            if (savedSet) { settings.value = savedSet; savedSettings.value = JSON.parse(JSON.stringify(savedSet)); }
           } catch(e) { console.error('Gagal memuat pengaturan:', e); }
         };
 
@@ -3053,8 +3136,10 @@
           selectedRows, currentPage, itemsPerPage, toast, isLoggedIn, loginForm, loginError, importMode, fileInputRef,
           isImporting, importProgress, importTotal, showSuggestions, companySuggestions, selectSuggestion,
           showEmailSuggestions, emailSuggestions, selectEmailSuggestion, duplicateEmailWarning, handleEnableAutoBackup, goToLegalDoc,
+          autoBackupStatus, isBackingUpNow, handleBackupNow, loadAutoBackupStatus,
+          savedSettings, isSettingsDirty, savedReminderSettings, isReminderSettingsDirty,
           currentUser, hasMenuAccess, loginLoading, MENU_ORDER, MENU_LABELS, accessData, expandedRole, isRoleFormOpen, roleForm,
-          isUserFormOpen, userForm, openRoleForm, saveRoleForm, confirmDeleteRole, openUserForm, saveUserForm, confirmDeleteUser,
+          isUserFormOpen, userForm, openRoleForm, saveRoleForm, confirmDeleteRole, openUserForm, saveUserForm, confirmDeleteUser, isRoleDirty,
           isAllFiltersActive, activeFilters, isFilterOpen, resetFilters, vendorLegalFilter,
           isDocModalOpen, selectedDocVendor, openDocModal, docFields, getDocStatus, getDocLink, renderDocBadgeHTML, getComplianceScore,
           isBulkStatusModalOpen, bulkStatusValue, openBulkStatusModal, closeBulkStatusModal, handleBulkUpdateStatus,
