@@ -629,8 +629,14 @@
                 
                 <select v-model="legalDocFilter" @change="legalCurrentPage = 1" class="border border-slate-300 bg-white rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm cursor-pointer ml-2 max-w-[200px] truncate">
                     <option value="ALL">Semua Dokumen</option>
+                    <option value="ED_EXPIRED">🔴 Dokumen Sudah ED (Kadaluarsa)</option>
+                    <option value="ED_SOON">🟠 Akan ED (≤30 Hari)</option>
                     <option v-for="doc in docFields" :key="doc.key" :value="doc.key">Punya {{ doc.label }}</option>
                 </select>
+
+                <div v-if="edVendorCount > 0" class="flex items-center gap-2 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600">
+                  <i class="ph-fill ph-warning-circle"></i> {{ edVendorCount }} vendor punya dokumen ED
+                </div>
               </div>
             </div>
 
@@ -660,6 +666,7 @@
                     <th @click="handleLegalSort('sppkpStatus')" class="px-4 py-4 font-bold text-slate-700 border-b border-slate-200 text-center cursor-pointer hover:bg-slate-50 group">
                       <div class="flex items-center justify-center gap-2">PKP/Non PKP <i class="ph ph-arrows-down-up" :class="legalSortConfig.key === 'sppkpStatus' ? 'text-indigo-500' : 'text-slate-300 opacity-0 group-hover:opacity-100'"></i></div>
                     </th>
+                    <th class="px-4 py-4 font-bold text-slate-700 border-b border-slate-200 text-center">Status ED</th>
                     <th class="px-4 py-4 font-bold text-slate-700 border-b border-slate-200 text-center sticky right-0 bg-white/95 shadow-[-4px_0_10px_rgba(0,0,0,0.02)]">Detail Penuh (22 Dok)</th>
                   </tr>
                 </thead>
@@ -687,6 +694,14 @@
                     <td class="px-4 py-4 text-center" v-html="renderDocBadgeHTML(v, 'nib')"></td>
                     <td class="px-4 py-4 text-center" v-html="renderDocBadgeHTML(v, 'iso9001')"></td>
                     <td class="px-4 py-4 text-center" v-html="renderDocBadgeHTML(v, 'sppkpStatus')"></td>
+                    <td class="px-4 py-4 text-center">
+                       <span v-if="v.hasExpiredDoc" class="px-2 py-1 bg-rose-100 text-rose-700 rounded-md text-[10px] font-bold border border-rose-200 flex items-center gap-1 justify-center"><i class="ph-fill ph-warning-circle"></i> ED</span>
+                       <span v-else-if="v.hasExpiringSoonDoc" class="px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-[10px] font-bold border border-amber-200 flex items-center gap-1 justify-center"><i class="ph-fill ph-clock-countdown"></i> Segera ED</span>
+                       <span v-else class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-md text-[10px] font-bold border border-emerald-200">Aman</span>
+                       <button v-if="(v.hasExpiredDoc || v.hasExpiringSoonDoc) && hasMenuAccess('reminder', 'full')" @click="handleSendSingleReminder(v)" :disabled="isSendingSingleReminder === v.id" class="mt-1.5 mx-auto flex items-center gap-1 text-[10px] font-bold text-rose-600 hover:text-white hover:bg-rose-500 px-2 py-1 rounded-lg transition-colors" title="Kirim reminder minta update dokumen ED">
+                         <i class="ph-fill" :class="isSendingSingleReminder === v.id ? 'ph-circle-notch animate-spin' : 'ph-bell-ringing'"></i> Reminder
+                       </button>
+                    </td>
                     <td class="px-4 py-4 text-center sticky right-0 bg-white group-hover:bg-slate-50/80 transition-colors shadow-[-4px_0_10px_rgba(0,0,0,0.02)]">
                        <button @click="openDocModal(v)" class="bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-colors border border-indigo-100 flex items-center gap-2 mx-auto shadow-sm">
                          Lihat Dokumen <i class="ph-bold ph-caret-right"></i>
@@ -694,7 +709,7 @@
                     </td>
                   </tr>
                   <tr v-if="currentLegalData.length === 0">
-                    <td colspan="8" class="py-20 text-center text-slate-400 font-medium">Tidak ada dokumen legal yang ditemukan. Silakan import Formulir Anda.</td>
+                    <td colspan="9" class="py-20 text-center text-slate-400 font-medium">Tidak ada dokumen legal yang ditemukan. Silakan import Formulir Anda.</td>
                   </tr>
                 </tbody>
               </table>
@@ -1372,6 +1387,29 @@
                 </div>
               </div>
 
+              <!-- Sec 2b: Kontak Finance & Rekening -->
+              <div>
+                <h3 class="text-sm font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="ph-fill ph-bank"></i> Kontak Finance & Rekening</h3>
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-5 p-5 bg-slate-50/50 rounded-2xl border border-slate-100">
+                  <div class="md:col-span-4">
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">PIC Finance</label>
+                    <input v-model="formData.financePic" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Nama PIC Finance" />
+                  </div>
+                  <div class="md:col-span-4">
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">E-mail Finance</label>
+                    <input v-model="formData.financeEmail" type="email" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="finance@vendor.com" />
+                  </div>
+                  <div class="md:col-span-4">
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">No. HP/WA Finance</label>
+                    <input v-model="formData.financeHp" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="08xxxxxxxxxx" />
+                  </div>
+                  <div class="md:col-span-12">
+                    <label class="block text-xs font-bold text-slate-500 mb-1.5">Nomor Rekening & Bank (untuk Invoice)</label>
+                    <input v-model="formData.bankAccount" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Cth: 46000310840 - BCA" />
+                  </div>
+                </div>
+              </div>
+
               <!-- Sec 3 -->
               <div>
                 <h3 class="text-sm font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2"><i class="ph-fill ph-briefcase"></i> Detail Layanan</h3>
@@ -1442,8 +1480,9 @@
                   <div v-for="doc in docFields" :key="doc.key" class="border border-slate-200 rounded-xl p-4 flex flex-col justify-between bg-slate-50/50 hover:bg-white hover:shadow-md transition-all group relative overflow-hidden">
                      <div v-if="getDocStatus(selectedDocVendor, doc.key) !== 'TIDAK ADA' && getDocStatus(selectedDocVendor, doc.key) !== ''" class="absolute -right-6 top-3 bg-emerald-500 text-white text-[8px] font-black py-0.5 px-6 rotate-45 shadow-sm">OK</div>
                      <p class="text-sm font-bold text-slate-700 mb-4 pr-4">{{ doc.label }}</p>
-                     <div class="flex items-center justify-between mt-auto">
+                     <div class="flex items-center justify-between mt-auto gap-2 flex-wrap">
                          <span v-html="renderDocBadgeHTML(selectedDocVendor, doc.key)"></span>
+                         <span v-if="doc.hasExpiry" v-html="renderExpiryBadgeHTML(selectedDocVendor, doc.key)"></span>
                          
                          <a v-if="getDocLink(selectedDocVendor, doc.key) && getDocLink(selectedDocVendor, doc.key).startsWith('http')" :href="getDocLink(selectedDocVendor, doc.key)" target="_blank" rel="noreferrer" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white px-2 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors text-xs font-bold shadow-sm" title="Buka File Dokumen">
                              Buka <i class="ph-bold ph-arrow-square-out"></i>
@@ -1582,6 +1621,29 @@
             if (!docs[docKey] || !docs[docKey].link) return '';
             return docs[docKey].link;
         } catch(e) { return ''; }
+    };
+
+    const getDocExpiry = (vendor, docKey) => {
+        if (!vendor || !vendor.documents) return '';
+        try {
+            let docs = typeof vendor.documents === 'string' ? JSON.parse(vendor.documents) : vendor.documents;
+            if (!docs[docKey] || !docs[docKey].expiry) return '';
+            return Number(docs[docKey].expiry);
+        } catch(e) { return ''; }
+    };
+
+    const renderExpiryBadgeHTML = (vendor, docKey) => {
+        const expiry = getDocExpiry(vendor, docKey);
+        if (!expiry) return '';
+        const now = new Date().getTime();
+        const days = Math.floor((expiry - now) / (1000 * 60 * 60 * 24));
+        const dateStr = new Date(expiry).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        if (days < 0) {
+            return `<span class="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-md text-[9px] font-bold border border-rose-200 flex items-center gap-1"><i class="ph-fill ph-warning-circle"></i> ED ${dateStr} (${Math.abs(days)} hari lalu)</span>`;
+        } else if (days <= 30) {
+            return `<span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-md text-[9px] font-bold border border-amber-200 flex items-center gap-1"><i class="ph-fill ph-clock-countdown"></i> ED ${dateStr} (${days} hari lagi)</span>`;
+        }
+        return `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-[9px] font-semibold border border-slate-200">Berlaku s.d. ${dateStr}</span>`;
     };
 
     const renderDocBadgeHTML = (vendor, docKey) => {
@@ -1806,26 +1868,26 @@
 
         const docFields = ref([
           { key: 'companyProfile', label: 'Company Profile' },
-          { key: 'aktaPendirian', label: 'Akta Pendirian' },
-          { key: 'aktaPerubahan', label: 'Akta Perubahan Terupdate' },
-          { key: 'nib', label: 'NIB OSS RBA & KBLI' },
+          { key: 'aktaPendirian', label: 'Akta Pendirian', hasExpiry: true },
+          { key: 'aktaPerubahan', label: 'Akta Perubahan Terupdate', hasExpiry: true },
+          { key: 'nib', label: 'NIB OSS RBA & KBLI', hasExpiry: true },
           { key: 'npwp', label: 'NPWP 16 Digit' },
           { key: 'sppkpStatus', label: 'Status Perusahaan SPPKP / Non PKP' },
           { key: 'nonPkp', label: 'Surat Keterangan Non PKP' },
           { key: 'skt', label: 'Surat Keterangan Terdaftar (SKT)' },
           { key: 'merk', label: 'Merk/Brand (tulis dengan jelas)' },
-          { key: 'distributor', label: 'Surat Penunjukan Distributor' },
+          { key: 'distributor', label: 'Surat Penunjukan Distributor', hasExpiry: true },
           { key: 'negara', label: 'Negara Asal (produsen/pabrik pembuat)' },
-          { key: 'iso9001', label: 'Sertifikat ISO 9001' },
-          { key: 'iso45001', label: 'Sertifikat ISO 45001' },
-          { key: 'iso14001', label: 'Sertifikat ISO 14001' },
-          { key: 'iso22000', label: 'Sertifikat ISO 22000' },
-          { key: 'fssc', label: 'Sertifikat FSSC' },
-          { key: 'halal', label: 'Sertifikat Halal' },
-          { key: 'smk3', label: 'SMK3 (Sistem Manajemen K3)' },
-          { key: 'kan', label: 'Sertifikat KAN (ISO 17025)' },
+          { key: 'iso9001', label: 'Sertifikat ISO 9001', hasExpiry: true },
+          { key: 'iso45001', label: 'Sertifikat ISO 45001', hasExpiry: true },
+          { key: 'iso14001', label: 'Sertifikat ISO 14001', hasExpiry: true },
+          { key: 'iso22000', label: 'Sertifikat ISO 22000', hasExpiry: true },
+          { key: 'fssc', label: 'Sertifikat FSSC', hasExpiry: true },
+          { key: 'halal', label: 'Sertifikat Halal', hasExpiry: true },
+          { key: 'smk3', label: 'SMK3 (Sistem Manajemen K3)', hasExpiry: true },
+          { key: 'kan', label: 'Sertifikat KAN (ISO 17025)', hasExpiry: true },
           { key: 'ruangKan', label: 'Ruang Lingkup KAN (tulis dengan jelas)' },
-          { key: 'instansi', label: 'Sertifikat Penunjukan Instansi Pemerintahan' },
+          { key: 'instansi', label: 'Sertifikat Penunjukan Instansi Pemerintahan', hasExpiry: true },
           { key: 'sppkp', label: 'Dokumen SPPKP' }
         ]);
 
@@ -2294,7 +2356,7 @@
         const totalPages = computed(() => Math.max(1, Math.ceil(sortedVendors.value.length / itemsPerPage.value)));
         const currentData = computed(() => sortedVendors.value.slice((currentPage.value - 1) * itemsPerPage.value, currentPage.value * itemsPerPage.value));
 
-        const uniqueLegalVendors = computed(() => {
+        const legalVendorsWithEDFlags = computed(() => {
             const map = new Map();
             filteredVendors.value.forEach(v => {
                 let parsedDocs = {};
@@ -2316,9 +2378,32 @@
                     }
                 }
             });
-            
-            let items = Array.from(map.values());
-            if (legalDocFilter.value !== 'ALL') {
+
+            return Array.from(map.values()).map(v => {
+                // Hitung ulang status ED dari dokumen yang sudah digabung (kasus vendor duplikat),
+                // supaya konsisten walau data ED-nya berasal dari baris duplikat yang berbeda.
+                const now = new Date().getTime();
+                let hasExpiredDoc = false, hasExpiringSoonDoc = false;
+                for (let k in v.documents) {
+                    const exp = v.documents[k] && v.documents[k].expiry ? Number(v.documents[k].expiry) : 0;
+                    if (!exp) continue;
+                    if (exp < now) hasExpiredDoc = true;
+                    else if (exp - now <= 30 * 24 * 60 * 60 * 1000) hasExpiringSoonDoc = true;
+                }
+                v.hasExpiredDoc = hasExpiredDoc;
+                v.hasExpiringSoonDoc = hasExpiringSoonDoc;
+                return v;
+            });
+        });
+
+        const uniqueLegalVendors = computed(() => {
+            let items = legalVendorsWithEDFlags.value;
+
+            if (legalDocFilter.value === 'ED_EXPIRED') {
+                items = items.filter(v => v.hasExpiredDoc);
+            } else if (legalDocFilter.value === 'ED_SOON') {
+                items = items.filter(v => v.hasExpiringSoonDoc);
+            } else if (legalDocFilter.value !== 'ALL') {
                 items = items.filter(v => v.documents && v.documents[legalDocFilter.value] && v.documents[legalDocFilter.value].status !== 'TIDAK ADA' && v.documents[legalDocFilter.value].status);
             }
             
@@ -2349,6 +2434,7 @@
 
         const legalTotalPages = computed(() => Math.max(1, Math.ceil(uniqueLegalVendors.value.length / legalItemsPerPage.value)));
         const currentLegalData = computed(() => uniqueLegalVendors.value.slice((legalCurrentPage.value - 1) * legalItemsPerPage.value, legalCurrentPage.value * legalItemsPerPage.value));
+        const edVendorCount = computed(() => legalVendorsWithEDFlags.value.filter(v => v.hasExpiredDoc).length);
 
         const stats = computed(() => ({
           total: filteredVendors.value.length,
@@ -2826,6 +2912,30 @@
                         if (colMap.ruangKan === undefined && cleanH.includes('ruang lingkup kan')) colMap.ruangKan = i;
                         if (colMap.instansi === undefined && cleanH.includes('instansi pemerintahan') && !cleanH.includes('upload')) colMap.instansi = i;
                         if (colMap.instansiLink === undefined && cleanH.includes('upload') && cleanH.includes('instansi pemerintahan')) colMap.instansiLink = i;
+
+                        // Kolom baru (update form Juli 2026): kontak Finance & rekening bank.
+                        if (colMap.financePic === undefined && cleanH.includes('pic finance')) colMap.financePic = i;
+                        if (colMap.financeEmail === undefined && cleanH.includes('e-mail finance')) colMap.financeEmail = i;
+                        if (colMap.financeHp === undefined && cleanH.includes('handphone/wa finance')) colMap.financeHp = i;
+                        if (colMap.bankAccount === undefined && cleanH.includes('nomor rekening')) colMap.bankAccount = i;
+
+                        // Kolom baru: "Akhir Masa Berlaku ..." (ED) untuk 13 jenis dokumen.
+                        // Dicocokkan lewat kombinasi "akhir masa berlaku" + kata kunci nama dokumennya.
+                        if (cleanH.includes('akhir masa berlaku')) {
+                            if (colMap.distExpiry === undefined && cleanH.includes('distributor')) colMap.distExpiry = i;
+                            else if (colMap.iso9001Expiry === undefined && cleanH.includes('iso 9001')) colMap.iso9001Expiry = i;
+                            else if (colMap.iso45001Expiry === undefined && cleanH.includes('iso 45001')) colMap.iso45001Expiry = i;
+                            else if (colMap.iso14001Expiry === undefined && cleanH.includes('iso 14001')) colMap.iso14001Expiry = i;
+                            else if (colMap.iso22000Expiry === undefined && cleanH.includes('iso 22000')) colMap.iso22000Expiry = i;
+                            else if (colMap.fsscExpiry === undefined && cleanH.includes('fssc')) colMap.fsscExpiry = i;
+                            else if (colMap.halalExpiry === undefined && cleanH.includes('halal')) colMap.halalExpiry = i;
+                            else if (colMap.smk3Expiry === undefined && cleanH.includes('smk3')) colMap.smk3Expiry = i;
+                            else if (colMap.kanExpiry === undefined && cleanH.includes('kan')) colMap.kanExpiry = i;
+                            else if (colMap.instansiExpiry === undefined && cleanH.includes('instansi')) colMap.instansiExpiry = i;
+                            else if (colMap.aktaExpiry === undefined && cleanH.includes('akta pendirian')) colMap.aktaExpiry = i;
+                            else if (colMap.aktaUbahExpiry === undefined && cleanH.includes('akta perubahan')) colMap.aktaUbahExpiry = i;
+                            else if (colMap.nibExpiry === undefined && cleanH.includes('nib')) colMap.nibExpiry = i;
+                        }
                     });
                     
                     if (headers.includes('timestamp') || headers.some(h => h.includes('nama perusahaan (contoh'))) isFormulirSeleksi = true;
@@ -2896,7 +3006,20 @@
               let formattedPhone = formatIndonesianPhone(rowPhone);
               let formattedFax = formatIndonesianPhone(rowFax);
 
-              const extractDoc = (index, linkIndex) => {
+              const parseFormDateCell = (val) => {
+                  if (val === undefined || val === null || val === '') return '';
+                  let d;
+                  if (typeof val === 'number') {
+                      d = val < 100000 ? new Date(Math.round((val - 25569) * 86400 * 1000)) : new Date(val);
+                  } else if (val instanceof Date) {
+                      d = val;
+                  } else {
+                      d = new Date(String(val).trim());
+                  }
+                  return (!isNaN(d.getTime()) && d.getFullYear() > 2000) ? d.getTime() : '';
+              };
+
+              const extractDoc = (index, linkIndex, expiryIndex) => {
                   let val = index !== undefined && index !== -1 && row[index] ? String(row[index]).trim() : '';
                   let linkUrl = linkIndex !== undefined && linkIndex !== -1 && row[linkIndex] ? String(row[linkIndex]).trim() : '';
                   let urls = linkUrl.split(/[,;\s\n\r]+/);
@@ -2911,32 +3034,33 @@
                   else if (val !== '' && !['TIDAK ADA', '-', 'TIDAK', 'NONE', 'N/A'].includes(val.toUpperCase())) statusText = val; 
                   
                   if (statusText === 'TIDAK ADA' && safeLink !== '') statusText = 'ADA';
-                  return { status: statusText, link: safeLink };
+                  const expiry = expiryIndex !== undefined ? parseFormDateCell(row[expiryIndex]) : '';
+                  return { status: statusText, link: safeLink, expiry: expiry };
               };
 
               let extractedDocs = {
                   companyProfile: extractDoc(colMap.compProfile, colMap.compProfileLink),
-                  aktaPendirian: extractDoc(colMap.akta, colMap.aktaLink),
-                  aktaPerubahan: extractDoc(colMap.aktaUbah, colMap.aktaUbahLink),
-                  nib: extractDoc(colMap.nib, colMap.nibLink),
+                  aktaPendirian: extractDoc(colMap.akta, colMap.aktaLink, colMap.aktaExpiry),
+                  aktaPerubahan: extractDoc(colMap.aktaUbah, colMap.aktaUbahLink, colMap.aktaUbahExpiry),
+                  nib: extractDoc(colMap.nib, colMap.nibLink, colMap.nibExpiry),
                   npwp: extractDoc(colMap.npwp, colMap.npwpLink),
                   sppkpStatus: { status: (colMap.sppkpStatus !== undefined && row[colMap.sppkpStatus] ? String(row[colMap.sppkpStatus]).trim() : 'TIDAK ADA'), link: '' },
                   nonPkp: extractDoc(colMap.nonPkpLink, colMap.nonPkpLink), 
                   sppkp: extractDoc(colMap.sppkpLink, colMap.sppkpLink),
                   skt: extractDoc(colMap.skt, colMap.sktLink),
                   merk: { status: (colMap.merk !== undefined && row[colMap.merk] ? String(row[colMap.merk]).trim() : 'TIDAK ADA'), link: '' },
-                  distributor: extractDoc(colMap.dist, colMap.distLink),
+                  distributor: extractDoc(colMap.dist, colMap.distLink, colMap.distExpiry),
                   negara: { status: (colMap.negara !== undefined && row[colMap.negara] ? String(row[colMap.negara]).trim() : 'TIDAK ADA'), link: '' },
-                  iso9001: extractDoc(colMap.iso9001, colMap.iso9001Link),
-                  iso45001: extractDoc(colMap.iso45001, colMap.iso45001Link),
-                  iso14001: extractDoc(colMap.iso14001, colMap.iso14001Link),
-                  iso22000: extractDoc(colMap.iso22000, colMap.iso22000Link),
-                  fssc: extractDoc(colMap.fssc, colMap.fsscLink),
-                  halal: extractDoc(colMap.halal, colMap.halalLink),
-                  smk3: extractDoc(colMap.smk3, colMap.smk3Link),
-                  kan: extractDoc(colMap.kan, colMap.kanLink),
+                  iso9001: extractDoc(colMap.iso9001, colMap.iso9001Link, colMap.iso9001Expiry),
+                  iso45001: extractDoc(colMap.iso45001, colMap.iso45001Link, colMap.iso45001Expiry),
+                  iso14001: extractDoc(colMap.iso14001, colMap.iso14001Link, colMap.iso14001Expiry),
+                  iso22000: extractDoc(colMap.iso22000, colMap.iso22000Link, colMap.iso22000Expiry),
+                  fssc: extractDoc(colMap.fssc, colMap.fsscLink, colMap.fsscExpiry),
+                  halal: extractDoc(colMap.halal, colMap.halalLink, colMap.halalExpiry),
+                  smk3: extractDoc(colMap.smk3, colMap.smk3Link, colMap.smk3Expiry),
+                  kan: extractDoc(colMap.kan, colMap.kanLink, colMap.kanExpiry),
                   ruangKan: { status: (colMap.ruangKan !== undefined && row[colMap.ruangKan] ? String(row[colMap.ruangKan]).trim() : 'TIDAK ADA'), link: '' },
-                  instansi: extractDoc(colMap.instansi, colMap.instansiLink)
+                  instansi: extractDoc(colMap.instansi, colMap.instansiLink, colMap.instansiExpiry)
               };
 
               extracted.push({
@@ -2947,6 +3071,10 @@
                   hp: formattedHp !== '-' ? "'" + formattedHp : '-',
                   jabatan: colMap.jabatan !== undefined ? String(row[colMap.jabatan] || '-') : '-',
                   keterangan: rowKeterangan, produk: rowProduk, status: rawStatus, alamat: rowAlamat,
+                  financePic: colMap.financePic !== undefined ? String(row[colMap.financePic] || '-').trim() || '-' : '-',
+                  financeEmail: colMap.financeEmail !== undefined ? String(row[colMap.financeEmail] || '-').trim() || '-' : '-',
+                  financeHp: colMap.financeHp !== undefined ? String(row[colMap.financeHp] || '-').trim() || '-' : '-',
+                  bankAccount: colMap.bankAccount !== undefined ? String(row[colMap.bankAccount] || '-').trim() || '-' : '-',
                   formTimestamp: rowTimestamp, 
                   documents: extractedDocs 
               });
@@ -3003,7 +3131,11 @@
                        hp: targetVendor.hp === '-' && v.hp !== '-' ? v.hp : targetVendor.hp,
                        phone: targetVendor.phone === '-' && v.phone !== '-' ? v.phone : targetVendor.phone,
                        alamat: targetVendor.alamat === '-' && v.alamat !== '-' ? v.alamat : targetVendor.alamat,
-                       produk: targetVendor.produk === '-' && v.produk !== '-' ? v.produk : targetVendor.produk
+                       produk: targetVendor.produk === '-' && v.produk !== '-' ? v.produk : targetVendor.produk,
+                       financePic: (!targetVendor.financePic || targetVendor.financePic === '-') && v.financePic && v.financePic !== '-' ? v.financePic : targetVendor.financePic,
+                       financeEmail: (!targetVendor.financeEmail || targetVendor.financeEmail === '-') && v.financeEmail && v.financeEmail !== '-' ? v.financeEmail : targetVendor.financeEmail,
+                       financeHp: (!targetVendor.financeHp || targetVendor.financeHp === '-') && v.financeHp && v.financeHp !== '-' ? v.financeHp : targetVendor.financeHp,
+                       bankAccount: (!targetVendor.bankAccount || targetVendor.bankAccount === '-') && v.bankAccount && v.bankAccount !== '-' ? v.bankAccount : targetVendor.bankAccount
                    };
                    if(v.formTimestamp) finalPayload.formTimestamp = v.formTimestamp; 
 
@@ -3148,6 +3280,7 @@
           handleLogin, handleLogout, fetchVendors, fetchLogs, sortConfig, filteredVendors, sortedVendors, totalPages, currentData, stats,
           handleSort, toggleRowSelection, toggleAllRows, openModal, handleSaveVendor, handleDelete, handleBulkDelete,
           uniqueLegalVendors, currentLegalData, legalTotalPages, legalDocFilter, legalSortConfig, handleLegalSort, legalCurrentPage, legalItemsPerPage,
+          getDocExpiry, renderExpiryBadgeHTML, edVendorCount,
           isResigned, isBlacklisted, isPO, displayKeterangan, canContact, getBadgeColor, getRowClass, formatWhatsAppLink,
           cleanCompanyName, guessSapaan, formatIndonesianPhone,
           handleCopyEmail, openWhatsApp, openEmail, handleExportExcel, handleImportFile,
