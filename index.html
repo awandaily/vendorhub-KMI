@@ -983,6 +983,30 @@
               </button>
             </div>
 
+            <!-- BROADCAST MANUAL DARI DAFTAR NAMA -->
+            <div v-if="hasMenuAccess('reminder', 'full')" class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
+              <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2"><i class="ph-bold ph-list-bullets text-indigo-500"></i> Broadcast Manual dari Daftar Nama</h3>
+              <p class="text-sm text-slate-500 mt-1 mb-4">Paste daftar nama vendor (1 nama per baris) untuk kirim reminder HANYA ke vendor-vendor itu — tidak peduli statusnya sudah RE-VALIDASI atau belum. Cocok untuk kasus khusus/permintaan tertentu.</p>
+              <textarea v-model="reminderListInput" rows="6" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none font-mono text-slate-600 leading-relaxed shadow-inner mb-4" placeholder="Andalan Sumber Jaya, PT&#10;Aneka Bina Citra, PT&#10;..."></textarea>
+
+              <div class="flex flex-wrap gap-3">
+                <button @click="handleReminderListSend" :disabled="isSendingReminderList" class="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
+                  <i class="ph-bold" :class="isSendingReminderList ? 'ph-circle-notch animate-spin' : 'ph-paper-plane-tilt'"></i>
+                  {{ isSendingReminderList ? 'Memproses...' : 'Cari & Kirim Reminder' }}
+                </button>
+                <button v-if="reminderListInput" @click="reminderListInput = ''; reminderListNotFound = []" class="px-5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2">
+                  <i class="ph-bold ph-trash"></i>
+                </button>
+              </div>
+
+              <div v-if="reminderListNotFound.length > 0" class="mt-4 p-4 bg-rose-50 border border-rose-100 rounded-xl animate-fade-in">
+                <h4 class="text-xs font-bold text-rose-700 mb-3 flex items-center gap-1.5"><i class="ph-fill ph-warning-circle text-sm"></i> Tidak Diproses ({{ reminderListNotFound.length }}):</h4>
+                <div class="max-h-32 overflow-y-auto custom-scrollbar bg-white/50 p-2 rounded-lg border border-rose-100/50">
+                  <p v-for="(nf, idx) in reminderListNotFound" :key="idx" class="text-[11px] text-rose-600 mb-1.5 font-medium flex items-start gap-1"><span class="shrink-0">•</span> <span>{{ nf }}</span></p>
+                </div>
+              </div>
+            </div>
+
             <!-- PENGATURAN JADWAL & TEMPLATE -->
             <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
               <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2 mb-1"><i class="ph-bold ph-gear-six text-indigo-500"></i> Jadwal Otomatis & Template Email</h3>
@@ -1687,18 +1711,21 @@
 
     // ⚠️ Isi dengan URL Web App Apps Script Anda (Deploy → Manage deployments → salin URL /exec).
     // Cuma dipakai kalau index.html ini dibuka DI LUAR Apps Script (misalnya di Vercel).
-    const APPS_SCRIPT_API_URL = "https://script.google.com/macros/s/AKfycbypJsCj3lc3yvIHhwjIwx2fYfRjR60ApqjwvcIL6HjYCGeVNLaKinzaxBaTdJ4tCMAr/exec";
+    const APPS_SCRIPT_API_URL = "GANTI_DENGAN_URL_EXEC_APPS_SCRIPT_ANDA";
     // ⚠️ Harus SAMA PERSIS dengan CONFIG.API_SECRET di Code.gs Anda.
-    const API_SECRET = "vendorhub-kmi";
+    const API_SECRET = "GANTI_DENGAN_TEKS_RAHASIA_ACAK_ANDA_SENDIRI";
+
+    const LONG_RUNNING_FUNCS = ['sendBulkReminderNow', 'syncFromGoogleForm', 'bulkSaveVendorData'];
 
     const runGas = (func, ...args) => {
+      const timeoutMs = LONG_RUNNING_FUNCS.includes(func) ? 320000 : 30000; // 5m20s utk proses berat, cukup lewati batas 6 menit Apps Script
       return new Promise((resolve, reject) => {
         // Mode 1: dijalankan langsung di dalam Apps Script (HtmlService) — dipertahankan
         // supaya /dev dan /exec bawaan Apps Script tetap berfungsi seperti biasa untuk testing.
         if (typeof google !== 'undefined' && typeof google.script !== 'undefined') {
           const timeoutId = setTimeout(() => {
               reject(new Error("Koneksi ke Google Server terputus (Timeout). Silakan coba lagi."));
-          }, 30000);
+          }, timeoutMs);
 
           google.script.run
             .withSuccessHandler(res => {
@@ -1729,7 +1756,7 @@
 
         const timeoutId = setTimeout(() => {
             reject(new Error("Koneksi ke server terputus (Timeout). Silakan coba lagi."));
-        }, 30000);
+        }, timeoutMs);
 
         fetch(APPS_SCRIPT_API_URL, {
           method: 'POST',
@@ -1978,6 +2005,39 @@
             addLog('PENGATURAN', `Memperbarui konfigurasi Reminder Email`);
           } catch(e) { showToast(e, "error"); }
           loading.value = false;
+        };
+
+        const reminderListInput = ref('');
+        const reminderListNotFound = ref([]);
+        const isSendingReminderList = ref(false);
+
+        const handleReminderListSend = async () => {
+          if (!reminderListInput.value.trim()) return showToast("Masukkan daftar nama vendor terlebih dahulu", "warning");
+
+          const lines = reminderListInput.value.split('\n').map(l => l.trim()).filter(l => l);
+          const foundVendors = []; const notFound = [];
+
+          lines.forEach(line => {
+              const searchStrClean = cleanCompanyName(line);
+              const matches = vendors.value.filter(v => cleanCompanyName(v.perusahaan) === searchStrClean && searchStrClean);
+              if (matches.length > 0) {
+                  let best = matches.find(m => m.email && m.email !== '-') || matches[0];
+                  if (best.email && best.email !== '-') {
+                      if (!foundVendors.some(f => f.id === best.id)) foundVendors.push(best);
+                  } else notFound.push(`${line} (Tidak ada email)`);
+              } else notFound.push(`${line} (Tidak ditemukan)`);
+          });
+
+          reminderListNotFound.value = notFound;
+          if (foundVendors.length === 0) { showToast("Tidak ada vendor valid yang ditemukan", "error"); return; }
+
+          isSendingReminderList.value = true;
+          try {
+            const res = await runGas('sendReminderToVendorIds', foundVendors.map(v => v.id));
+            showToast(res.message || "Reminder terkirim!");
+            addLog('REMINDER', `Broadcast reminder manual dari daftar nama: ${res.sent || 0} vendor.`);
+          } catch(e) { showToast(e, "error"); }
+          isSendingReminderList.value = false;
         };
 
         const handleSendBulkReminder = async () => {
@@ -3277,6 +3337,7 @@
           handleFetchFormHeaders, saveAppConfig, handleSyncFromForm,
           reminderSettings, reminderOverview, isSendingReminder, isSendingSingleReminder,
           loadReminderConfig, loadReminderOverview, saveReminderConfig, handleSendBulkReminder, handleSendSingleReminder,
+          reminderListInput, reminderListNotFound, isSendingReminderList, handleReminderListSend,
           handleLogin, handleLogout, fetchVendors, fetchLogs, sortConfig, filteredVendors, sortedVendors, totalPages, currentData, stats,
           handleSort, toggleRowSelection, toggleAllRows, openModal, handleSaveVendor, handleDelete, handleBulkDelete,
           uniqueLegalVendors, currentLegalData, legalTotalPages, legalDocFilter, legalSortConfig, handleLegalSort, legalCurrentPage, legalItemsPerPage,
