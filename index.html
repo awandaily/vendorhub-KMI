@@ -961,14 +961,14 @@
                 <div class="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center shrink-0"><i class="ph-fill ph-warning-circle text-2xl text-rose-500"></i></div>
                 <div>
                   <p class="text-2xl font-black text-slate-800">{{ reminderOverview.overdueCount }}</p>
-                  <p class="text-xs font-bold text-slate-500">Vendor Sudah Lewat 6 Bulan (RE-VALIDASI)</p>
+                  <p class="text-xs font-bold text-slate-500">Vendor Sudah Lewat {{ reminderSettings.validityMonths }} Bulan (RE-VALIDASI)</p>
                 </div>
               </div>
               <div class="bg-white rounded-2xl p-5 border border-amber-200 shadow-sm flex items-center gap-4">
                 <div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center shrink-0"><i class="ph-fill ph-clock-countdown text-2xl text-amber-500"></i></div>
                 <div>
                   <p class="text-2xl font-black text-slate-800">{{ reminderOverview.preDueCount }}</p>
-                  <p class="text-xs font-bold text-slate-500">Vendor Mendekati H-1 Bulan (Bulan ke-5)</p>
+                  <p class="text-xs font-bold text-slate-500">Vendor Mendekati H-1 Bulan (Bulan ke-{{ reminderSettings.validityMonths - 1 }})</p>
                 </div>
               </div>
             </div>
@@ -976,7 +976,7 @@
             <!-- KIRIM MANUAL -->
             <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm">
               <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2"><i class="ph-bold ph-paper-plane-tilt text-indigo-500"></i> Kirim Reminder Manual</h3>
-              <p class="text-sm text-slate-500 mt-1 mb-4">Kirim email reminder sekarang juga ke semua vendor yang statusnya sudah RE-VALIDASI (lewat 6 bulan), tanpa menunggu jadwal otomatis.</p>
+              <p class="text-sm text-slate-500 mt-1 mb-4">Kirim email reminder sekarang juga ke semua vendor yang statusnya sudah RE-VALIDASI (lewat {{ reminderSettings.validityMonths }} bulan), tanpa menunggu jadwal otomatis.</p>
               <button v-if="hasMenuAccess('reminder', 'full')" @click="handleSendBulkReminder" :disabled="isSendingReminder" class="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
                 <i class="ph-bold" :class="isSendingReminder ? 'ph-circle-notch animate-spin' : 'ph-paper-plane-tilt'"></i>
                 {{ isSendingReminder ? 'Mengirim...' : `Kirim Reminder ke ${reminderOverview.overdueCount} Vendor Sekarang` }}
@@ -1026,6 +1026,15 @@
                 </div>
               </label>
 
+              <div class="pl-3 mb-5 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                <label class="text-sm font-bold text-indigo-900 block mb-2 flex items-center gap-2"><i class="ph-fill ph-calendar-check"></i> Anggap Data Kadaluarsa (Perlu Validasi Ulang) Setelah:</label>
+                <select v-model.number="reminderSettings.validityMonths" class="w-full sm:w-72 px-4 py-3 rounded-xl border border-indigo-200 bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all font-bold text-sm text-indigo-700">
+                  <option :value="6">6 Bulan</option>
+                  <option :value="12">12 Bulan (1 Tahun)</option>
+                </select>
+                <p class="text-xs text-indigo-600/70 mt-1.5">Berlaku untuk semua badge VALID/RE-VALIDASI di Data Vendor & pemicu reminder — tidak lagi selalu 6 bulan.</p>
+              </div>
+
               <div class="pl-3 mb-4">
                 <label class="text-sm font-bold text-slate-700 block mb-2">Kirim Ulang Reminder Setiap:</label>
                 <select v-model.number="reminderSettings.intervalDays" class="w-full sm:w-72 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all font-medium text-sm">
@@ -1034,7 +1043,7 @@
                   <option :value="14">Setiap 14 Hari</option>
                   <option :value="30">Setiap 30 Hari</option>
                 </select>
-                <p class="text-xs text-slate-400 mt-1.5">Berlaku untuk vendor yang SUDAH lewat 6 bulan, supaya tidak dikirimi email setiap hari terus-menerus.</p>
+                <p class="text-xs text-slate-400 mt-1.5">Berlaku untuk vendor yang SUDAH lewat periode validitas di atas, supaya tidak dikirimi email setiap hari terus-menerus.</p>
               </div>
 
               <label class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-200 transition-colors mb-6">
@@ -1047,7 +1056,7 @@
                     Kirim Peringatan Dini (H-1 Bulan)
                     <span v-if="savedReminderSettings" :class="['text-[10px] font-bold px-2 py-0.5 rounded-full border', savedReminderSettings.preDueEnabled ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200']">{{ savedReminderSettings.preDueEnabled ? 'AKTIF' : 'NONAKTIF' }}</span>
                   </span>
-                  <span class="text-xs text-slate-500 font-medium">Kirim 1x email peringatan di bulan ke-5, sebelum data resmi berstatus RE-VALIDASI di bulan ke-6.</span>
+                  <span class="text-xs text-slate-500 font-medium">Kirim 1x email peringatan di bulan ke-{{ reminderSettings.validityMonths - 1 }}, sebelum data resmi berstatus RE-VALIDASI di bulan ke-{{ reminderSettings.validityMonths }}.</span>
                 </div>
               </label>
 
@@ -1835,7 +1844,7 @@
 
         // === REMINDER EMAIL (v12.94) ===
         const reminderSettings = ref({
-          enabled: false, intervalDays: 7, preDueEnabled: false,
+          enabled: false, intervalDays: 7, preDueEnabled: false, validityMonths: 6,
           senderName: "Tim Purchasing", ccEmail: "",
           subject: "Reminder: Update Data Legalitas Vendor - {{perusahaan}}",
           body: "Yth. Bapak/Ibu {{pic}},\n\nKami informasikan bahwa data legalitas perusahaan {{perusahaan}} yang terdaftar di sistem kami sudah tidak diperbarui sejak {{tanggal_update}} ({{hari_terlambat}} hari yang lalu).\n\nMohon kesediaannya untuk mengisi ulang formulir data vendor kami agar status legalitas perusahaan Anda tetap valid.\n\nTerima kasih atas kerja samanya.\n\nHormat kami,\nTim Purchasing"
@@ -1954,9 +1963,9 @@
           if (!timestamp || timestamp === '-' || timestamp === 0 || timestamp === "") return false;
           const d = new Date(timestamp);
           if (isNaN(d.getTime())) return false;
-          const sixMonthsAgo = new Date();
-          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-          return d >= sixMonthsAgo;
+          const cutoff = new Date();
+          cutoff.setMonth(cutoff.getMonth() - (reminderSettings.value.validityMonths || 6));
+          return d >= cutoff;
         };
 
         const handleFetchFormHeaders = async () => {
@@ -2555,6 +2564,7 @@
             fetchVendors(false);
             fetchLogs(true);
             loadAppSettings();
+            loadReminderConfig();
             if (!hasMenuAccess(activeTab.value)) activeTab.value = firstAccessibleMenu();
             resetInactivityTimer();
           } catch (e) {
@@ -2623,6 +2633,7 @@
             fetchLogs(true);
             resetInactivityTimer(); 
             await loadAppSettings();
+            loadReminderConfig(); // FIX: dulu baru dimuat saat buka tab Reminder Email, jadi badge VALID/RE-VALIDASI di Data Vendor sempat pakai default 6 bulan sebelum tab itu dibuka.
             loadReminderOverview();
           } else {
             loading.value = false;
@@ -2925,7 +2936,7 @@
                         if (colMap.legalitas === undefined && (cleanH === 'legalitas' || cleanH === 'badan usaha' || cleanH === 'bentuk badan')) colMap.legalitas = i;
                         if (colMap.pic === undefined && (cleanH === 'pic' || cleanH.includes('pic vendor') || cleanH === 'nama kontak' || cleanH === 'nama pic')) colMap.pic = i;
                         if (colMap.sapaan === undefined && cleanH === 'sapaan') colMap.sapaan = i;
-                        if (colMap.email === undefined && (cleanH === 'email' || cleanH === 'e-mail' || cleanH.includes('alamat email'))) colMap.email = i;
+                        if (colMap.email === undefined && !cleanH.includes('finance') && (cleanH === 'email' || cleanH.includes('e-mail') || cleanH.includes('alamat email'))) colMap.email = i;
                         if (colMap.phone === undefined && (cleanH.includes('nomor telepon perusahaan') || cleanH === 'telepon' || cleanH === 'telp')) colMap.phone = i;
                         if (colMap.fax === undefined && cleanH === 'fax') colMap.fax = i;
                         if (colMap.hp === undefined && (cleanH.includes('nomor handphone') || cleanH === 'hp' || cleanH === 'whatsapp' || cleanH === 'wa')) colMap.hp = i;
@@ -2990,13 +3001,21 @@
                             else if (colMap.fsscExpiry === undefined && cleanH.includes('fssc')) colMap.fsscExpiry = i;
                             else if (colMap.halalExpiry === undefined && cleanH.includes('halal')) colMap.halalExpiry = i;
                             else if (colMap.smk3Expiry === undefined && cleanH.includes('smk3')) colMap.smk3Expiry = i;
-                            else if (colMap.kanExpiry === undefined && cleanH.includes('kan')) colMap.kanExpiry = i;
+                            // FIX: cek 'kan' + '17025' sekaligus — header "Penunjukan Instansi" secara
+                            // tidak sengaja mengandung substring "kan" juga (...penunjuKAN...), bisa salah kena.
+                            else if (colMap.kanExpiry === undefined && cleanH.includes('kan') && cleanH.includes('17025')) colMap.kanExpiry = i;
                             else if (colMap.instansiExpiry === undefined && cleanH.includes('instansi')) colMap.instansiExpiry = i;
                             else if (colMap.aktaExpiry === undefined && cleanH.includes('akta pendirian')) colMap.aktaExpiry = i;
                             else if (colMap.aktaUbahExpiry === undefined && cleanH.includes('akta perubahan')) colMap.aktaUbahExpiry = i;
                             else if (colMap.nibExpiry === undefined && cleanH.includes('nib')) colMap.nibExpiry = i;
                         }
+                        // FIX: kolom "Akhir Masa Berlaku NIB" di form Anda ternyata BERLABEL SALAH
+                        // ("Akhir Masa Berlaku Akta Perubahan Terupdate 2") — tidak mengandung kata
+                        // "nib" sama sekali sehingga tidak pernah kena deteksi teks di atas. Fallback:
+                        // pakai kolom TEPAT SETELAH pertanyaan "Apakah NIB memiliki masa berlaku?".
+                        if (colMap.nibHasExpiryQuestion === undefined && cleanH.includes('apakah nib') && cleanH.includes('masa berlaku')) colMap.nibHasExpiryQuestion = i;
                     });
+                    if (colMap.nibExpiry === undefined && colMap.nibHasExpiryQuestion !== undefined) colMap.nibExpiry = colMap.nibHasExpiryQuestion + 1;
                     
                     if (headers.includes('timestamp') || headers.some(h => h.includes('nama perusahaan (contoh'))) isFormulirSeleksi = true;
                     break;
@@ -3163,7 +3182,7 @@
                let cleanEmail = String(v.email || '').toLowerCase().trim();
                if (!cleanComp) continue;
 
-               let matchedExisting = existingRecords.find(ext => {
+               let matchedExistingList = existingRecords.filter(ext => {
                    let isCompMatch = (ext.company === cleanComp);
                    if (!isCompMatch) return false;
                    // Nama perusahaan unik di database -> langsung anggap vendor yang sama
@@ -3172,8 +3191,11 @@
                    let isEmailMatch = (ext.email !== '' && ext.email !== '-' && ext.email === cleanEmail);
                    return isPicMatch || isEmailMatch;
                });
-
-               if (matchedExisting) {
+               // FIX: dulu cuma baris duplikat PERTAMA yang ketemu yang di-update — kalau ada
+               // 2+ baris duplikat dengan PIC/email persis sama, baris lainnya tidak pernah
+               // tersentuh sync selamanya. Sekarang SEMUA baris duplikat yang cocok ikut di-update.
+               if (matchedExistingList.length > 0) {
+                 matchedExistingList.forEach(matchedExisting => {
                    let targetVendor;
                    if (itemsToProcessMap.has(matchedExisting.id)) targetVendor = itemsToProcessMap.get(matchedExisting.id).payload;
                    else targetVendor = vendors.value.find(val => val.id === matchedExisting.id);
@@ -3188,6 +3210,7 @@
 
                    let finalPayload = {
                        ...targetVendor, documents: mergedDocs, 
+                       email: (!targetVendor.email || targetVendor.email === '-') && v.email && v.email !== '-' ? v.email : targetVendor.email,
                        hp: targetVendor.hp === '-' && v.hp !== '-' ? v.hp : targetVendor.hp,
                        phone: targetVendor.phone === '-' && v.phone !== '-' ? v.phone : targetVendor.phone,
                        alamat: targetVendor.alamat === '-' && v.alamat !== '-' ? v.alamat : targetVendor.alamat,
@@ -3200,6 +3223,7 @@
                    if(v.formTimestamp) finalPayload.formTimestamp = v.formTimestamp; 
 
                    itemsToProcessMap.set(matchedExisting.id, { action: 'update', payload: finalPayload });
+                 });
                } else {
                    let matchedNewId = Array.from(itemsToProcessMap.keys()).find(id => {
                        let p = itemsToProcessMap.get(id).payload; return cleanCompanyName(p.perusahaan) === cleanComp;
