@@ -1607,6 +1607,43 @@
       return cleaned.replace(/\s+/g, ' ').trim();
     }
 
+    // FUZZY MATCHING — mentolerir typo kecil di nama perusahaan (mis. "Andalan Sumber Jaya"
+    // vs "Andalan Simber Joyo"), selain variasi "PT/CV" yang sudah ditangani cleanCompanyName().
+    function levenshteinDistance(a, b) {
+      if (a === b) return 0;
+      if (a.length === 0) return b.length;
+      if (b.length === 0) return a.length;
+      let prev = [];
+      for (let j = 0; j <= b.length; j++) prev[j] = j;
+      for (let i = 1; i <= a.length; i++) {
+        const curr = [i];
+        for (let j = 1; j <= b.length; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+        }
+        prev = curr;
+      }
+      return prev[b.length];
+    }
+
+    // Nama pendek (<6 karakter) wajib identik persis, supaya tidak salah gabung 2 perusahaan
+    // pendek yang kebetulan mirip.
+    function isSimilarCompanyName(cleanA, cleanB) {
+      if (!cleanA || !cleanB) return false;
+      if (cleanA === cleanB) return true;
+      const maxLen = Math.max(cleanA.length, cleanB.length);
+      if (maxLen < 6) return false;
+      const dist = levenshteinDistance(cleanA, cleanB);
+      return (1 - (dist / maxLen)) >= 0.85;
+    }
+
+    // Cari nama grup yang SUDAH ADA dan paling mirip, supaya banyak baris dengan typo
+    // berbeda-beda tetap mengelompok ke SATU nama acuan yang sama.
+    function findCanonicalCompanyName(cleanName, knownKeysIterable) {
+      for (const known of knownKeysIterable) { if (isSimilarCompanyName(cleanName, known)) return known; }
+      return cleanName;
+    }
+
     function guessSapaan(name) {
       if (!name || name === '-') return 'Bpk/Ibu';
       let coreName = name.toLowerCase().replace(/^(bapak|ibu|bpk|sdr|sdri)\s+/i, '').trim();
@@ -2221,7 +2258,7 @@
         });
 
         const selectSuggestion = (item) => {
-          const relatedVendors = vendors.value.filter(v => cleanCompanyName(v.perusahaan) === cleanCompanyName(item.perusahaan));
+          const relatedVendors = vendors.value.filter(v => isSimilarCompanyName(cleanCompanyName(v.perusahaan), cleanCompanyName(item.perusahaan)));
           let bestRef = relatedVendors.find(v => isPO(v.keterangan)) || relatedVendors[0]; 
           formData.value.perusahaan = bestRef.perusahaan; 
           let filledFields = [];
@@ -2338,8 +2375,12 @@
             if (settings.value.hideDuplicate) {
                 const uniqueMap = new Map();
                 items.forEach(v => {
-                    const compName = cleanCompanyName(v.perusahaan);
-                    if(!compName) return;
+                    const rawKey = cleanCompanyName(v.perusahaan);
+                    if(!rawKey) return;
+                    // FIX: dulu exact-match saja, jadi "Andalan Sumber Jaya" vs "Andalan Simber Joyo"
+                    // (typo) dianggap 2 vendor beda dan tidak dikelompokkan. Sekarang dicari dulu
+                    // nama grup yang sudah ada dan MIRIP (toleransi typo kecil) sebelum bikin grup baru.
+                    const compName = findCanonicalCompanyName(rawKey, uniqueMap.keys());
 
                     if (!uniqueMap.has(compName)) {
                         uniqueMap.set(compName, { ...v, duplicates: [] });
@@ -3191,6 +3232,21 @@
                    let isEmailMatch = (ext.email !== '' && ext.email !== '-' && ext.email === cleanEmail);
                    return isPicMatch || isEmailMatch;
                });
+
+               // FIX: kalau tidak ada yang cocok PERSIS, coba cari yang MIRIP (toleransi typo kecil,
+               // mis. "Andalan Sumber Jaya" vs "Andalan Simber Joyo") sebelum dianggap vendor baru.
+               if (matchedExistingList.length === 0) {
+                   const fuzzyMatches = existingRecords.filter(ext => isSimilarCompanyName(ext.company, cleanComp));
+                   if (fuzzyMatches.length === 1) {
+                       matchedExistingList = fuzzyMatches;
+                   } else if (fuzzyMatches.length > 1) {
+                       const disambiguated = fuzzyMatches.filter(ext =>
+                           (ext.pic !== '' && ext.pic !== '-' && ext.pic === cleanPic) ||
+                           (ext.email !== '' && ext.email !== '-' && ext.email === cleanEmail)
+                       );
+                       matchedExistingList = disambiguated.length > 0 ? disambiguated : [fuzzyMatches[0]];
+                   }
+               }
                // FIX: dulu cuma baris duplikat PERTAMA yang ketemu yang di-update — kalau ada
                // 2+ baris duplikat dengan PIC/email persis sama, baris lainnya tidak pernah
                // tersentuh sync selamanya. Sekarang SEMUA baris duplikat yang cocok ikut di-update.
