@@ -2258,7 +2258,7 @@
         });
 
         const selectSuggestion = (item) => {
-          const relatedVendors = vendors.value.filter(v => isSimilarCompanyName(cleanCompanyName(v.perusahaan), cleanCompanyName(item.perusahaan)));
+          const relatedVendors = vendors.value.filter(v => cleanCompanyName(v.perusahaan) === cleanCompanyName(item.perusahaan));
           let bestRef = relatedVendors.find(v => isPO(v.keterangan)) || relatedVendors[0]; 
           formData.value.perusahaan = bestRef.perusahaan; 
           let filledFields = [];
@@ -2375,12 +2375,12 @@
             if (settings.value.hideDuplicate) {
                 const uniqueMap = new Map();
                 items.forEach(v => {
-                    const rawKey = cleanCompanyName(v.perusahaan);
-                    if(!rawKey) return;
-                    // FIX: dulu exact-match saja, jadi "Andalan Sumber Jaya" vs "Andalan Simber Joyo"
-                    // (typo) dianggap 2 vendor beda dan tidak dikelompokkan. Sekarang dicari dulu
-                    // nama grup yang sudah ada dan MIRIP (toleransi typo kecil) sebelum bikin grup baru.
-                    const compName = findCanonicalCompanyName(rawKey, uniqueMap.keys());
+                    const compName = cleanCompanyName(v.perusahaan);
+                    if(!compName) return;
+                    // CATATAN: sengaja EXACT match di sini (bukan fuzzy/typo-tolerant), karena fungsi
+                    // ini jalan berulang setiap data ter-refresh (tiap beberapa detik). Fuzzy matching
+                    // di sini terbukti terlalu berat untuk ribuan vendor dan bikin browser freeze.
+                    // Fuzzy matching tetap dipakai saat SYNC (mencegah duplikat baru akibat typo).
 
                     if (!uniqueMap.has(compName)) {
                         uniqueMap.set(compName, { ...v, duplicates: [] });
