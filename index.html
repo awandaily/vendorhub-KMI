@@ -361,6 +361,9 @@
                 <button @click="showDuplicateActiveOnly = !showDuplicateActiveOnly; currentPage = 1" :class="['text-sm px-3 py-1.5 rounded-lg font-bold border transition-colors flex items-center gap-1.5 shadow-sm', showDuplicateActiveOnly ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100']" title="Tampilkan hanya perusahaan yang punya lebih dari 1 baris berstatus Aktif">
                   <i class="ph-bold ph-warning-circle"></i> {{ showDuplicateActiveOnly ? 'Menampilkan Duplikat Aktif' : `Cek Duplikat Aktif (${duplicateActiveCount})` }}
                 </button>
+                <button v-if="duplicateActiveCount > 0 && hasMenuAccess('vendors', 'full')" @click="handleAutoResolveDuplicates" class="text-sm px-3 py-1.5 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-sm" title="Nonaktifkan otomatis duplikat yang legalitasnya belum ter-update, sisakan yang paling baru">
+                  <i class="ph-bold ph-magic-wand"></i> Rapikan Otomatis
+                </button>
 
                 <button v-if="searchQuery || sortConfig.key !== 'formTimestamp' || !isAllFiltersActive || vendorLegalFilter !== 'ALL' || showDuplicateActiveOnly" @click="searchQuery = ''; sortConfig = {key: 'formTimestamp', direction: 'desc'}; currentPage = 1; vendorLegalFilter = 'ALL'; showDuplicateActiveOnly = false; resetFilters();" class="text-sm px-3 py-1.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-lg font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors flex items-center gap-1.5 shadow-sm animate-scale-up" title="Reset pencarian dan pengurutan">
                   <i class="ph-bold ph-x-circle"></i> Reset Filter
@@ -1880,6 +1883,61 @@
           return new Set(Object.keys(counts).filter(k => counts[k] > 1));
         });
         const duplicateActiveCount = computed(() => duplicateActiveCompanies.value.size);
+
+        // Bandingkan tanggal update legalitas (formTimestamp) antar duplikat yang sama-sama Aktif —
+        // yang PALING BARU tetap Aktif, sisanya masuk daftar untuk dinonaktifkan. Grup yang semua
+        // anggotanya TIDAK punya tanggal update dilewati (tidak ada patokan "terbaru" yang bisa dipercaya).
+        const computeAutoResolvePlan = () => {
+          const groups = {};
+          vendors.value.forEach(v => {
+            if ((v.status || 'Aktif') !== 'Aktif') return;
+            const key = cleanCompanyName(v.perusahaan);
+            if (!key) return;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(v);
+          });
+
+          const plan = { toDeactivate: [], summary: [], skippedCount: 0 };
+          Object.values(groups).forEach(list => {
+            if (list.length <= 1) return;
+            const sorted = [...list].sort((a, b) => (Number(b.formTimestamp) || 0) - (Number(a.formTimestamp) || 0));
+            const keeper = sorted[0];
+            if (!keeper.formTimestamp) { plan.skippedCount++; return; } // tidak ada patokan tanggal sama sekali
+            const losers = sorted.slice(1);
+            plan.toDeactivate.push(...losers.map(v => v.id));
+            plan.summary.push({ company: keeper.perusahaan, losersCount: losers.length });
+          });
+          return plan;
+        };
+
+        const handleAutoResolveDuplicates = () => {
+          const plan = computeAutoResolvePlan();
+          if (plan.toDeactivate.length === 0) {
+            showToast(plan.skippedCount > 0
+              ? `Tidak bisa dirapikan otomatis: ${plan.skippedCount} grup duplikat tidak punya tanggal update legalitas untuk dijadikan patokan. Silakan cek & pilih manual.`
+              : "Tidak ada duplikat Aktif yang perlu dirapikan.", "info");
+            return;
+          }
+          openConfirm({
+            title: 'Rapikan Otomatis Vendor Duplikat',
+            message: `Sistem akan menonaktifkan (jadi Non-Aktif) ${plan.toDeactivate.length} baris duplikat dari ${plan.summary.length} perusahaan — HANYA baris dengan tanggal update legalitas PALING BARU yang tetap Aktif untuk tiap perusahaan.` +
+                     (plan.skippedCount > 0 ? ` (${plan.skippedCount} grup dilewati karena tidak ada tanggal update sama sekali untuk dibandingkan — perlu dicek manual.)` : '') +
+                     ` Tindakan ini bisa dibatalkan manual lagi kalau ada yang salah. Lanjutkan?`,
+            type: 'danger',
+            confirmText: 'Ya, Rapikan Sekarang',
+            cancelText: 'Batal',
+            onConfirm: async () => {
+              loading.value = true; loadingText.value = 'Merapikan vendor duplikat...';
+              try {
+                await runGas('bulkUpdateVendorsStatus', { ids: plan.toDeactivate, status: 'Non-Aktif' });
+                showToast(`${plan.toDeactivate.length} vendor duplikat berhasil dinonaktifkan otomatis.`);
+                addLog('UPDATE_STATUS', `Rapikan otomatis duplikat: nonaktifkan ${plan.toDeactivate.length} baris, sisakan yang legalitasnya terbaru per perusahaan.`);
+                await fetchVendors(false);
+              } catch (e) { showToast(e, "error"); }
+              loading.value = false;
+            }
+          });
+        };
         
         const isDocModalOpen = ref(false);
         const selectedDocVendor = ref(null);
@@ -3448,7 +3506,7 @@
           currentUser, hasMenuAccess, loginLoading, MENU_ORDER, MENU_LABELS, accessData, expandedRole, isRoleFormOpen, roleForm,
           isUserFormOpen, userForm, openRoleForm, saveRoleForm, confirmDeleteRole, openUserForm, saveUserForm, confirmDeleteUser, isRoleDirty,
           isAllFiltersActive, activeFilters, isFilterOpen, resetFilters, vendorLegalFilter,
-          showDuplicateActiveOnly, duplicateActiveCount, exportOnlyActive,
+          showDuplicateActiveOnly, duplicateActiveCount, exportOnlyActive, handleAutoResolveDuplicates,
           isDocModalOpen, selectedDocVendor, openDocModal, docFields, getDocStatus, getDocLink, renderDocBadgeHTML, getComplianceScore,
           isBulkStatusModalOpen, bulkStatusValue, openBulkStatusModal, closeBulkStatusModal, handleBulkUpdateStatus,
           confirmDialog, closeConfirm, executeConfirm, settings, formHeaders, formatDateOnly, isUpdateValid, formatTimeAgo,
