@@ -358,7 +358,11 @@
                     <option value="ADA">Sudah Ada Legalitas</option>
                 </select>
 
-                <button v-if="searchQuery || sortConfig.key !== 'formTimestamp' || !isAllFiltersActive || vendorLegalFilter !== 'ALL'" @click="searchQuery = ''; sortConfig = {key: 'formTimestamp', direction: 'desc'}; currentPage = 1; vendorLegalFilter = 'ALL'; resetFilters();" class="text-sm px-3 py-1.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-lg font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors flex items-center gap-1.5 shadow-sm animate-scale-up" title="Reset pencarian dan pengurutan">
+                <button @click="showDuplicateActiveOnly = !showDuplicateActiveOnly; currentPage = 1" :class="['text-sm px-3 py-1.5 rounded-lg font-bold border transition-colors flex items-center gap-1.5 shadow-sm', showDuplicateActiveOnly ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100']" title="Tampilkan hanya perusahaan yang punya lebih dari 1 baris berstatus Aktif">
+                  <i class="ph-bold ph-warning-circle"></i> {{ showDuplicateActiveOnly ? 'Menampilkan Duplikat Aktif' : `Cek Duplikat Aktif (${duplicateActiveCount})` }}
+                </button>
+
+                <button v-if="searchQuery || sortConfig.key !== 'formTimestamp' || !isAllFiltersActive || vendorLegalFilter !== 'ALL' || showDuplicateActiveOnly" @click="searchQuery = ''; sortConfig = {key: 'formTimestamp', direction: 'desc'}; currentPage = 1; vendorLegalFilter = 'ALL'; showDuplicateActiveOnly = false; resetFilters();" class="text-sm px-3 py-1.5 bg-slate-100 text-slate-600 border border-slate-200 rounded-lg font-bold hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors flex items-center gap-1.5 shadow-sm animate-scale-up" title="Reset pencarian dan pengurutan">
                   <i class="ph-bold ph-x-circle"></i> Reset Filter
                 </button>
 
@@ -1231,9 +1235,13 @@
                   <i class="ph-fill ph-download text-4xl text-emerald-500 group-hover:text-white"></i>
                 </div>
                 <h3 class="text-xl font-bold text-slate-800 mb-2">Export ke Excel</h3>
-                <p class="text-sm text-slate-500 mb-8 px-4">Unduh seluruh database vendor saat ini dalam format .xlsx yang rapi dan siap diprint. Sesuai format asal.</p>
+                <p class="text-sm text-slate-500 mb-4 px-4">Unduh seluruh database vendor saat ini dalam format .xlsx yang rapi dan siap diprint. Sesuai format asal.</p>
+                <label class="flex items-center gap-2.5 mb-6 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
+                  <input type="checkbox" v-model="exportOnlyActive" class="w-4.5 h-4.5 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500/30" />
+                  <span class="text-sm font-bold text-slate-700">Hanya vendor berstatus Aktif <span class="text-slate-400 font-medium">(untuk monitoring PO)</span></span>
+                </label>
                 <button @click="handleExportExcel" class="w-full mt-auto bg-slate-900 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
-                  <i class="ph-fill ph-file-xls text-xl"></i> Unduh Database
+                  <i class="ph-fill ph-file-xls text-xl"></i> Unduh Database{{ exportOnlyActive ? ' (Aktif Saja)' : '' }}
                 </button>
               </div>
 
@@ -1856,6 +1864,22 @@
         const activeFilters = ref({ aktif: true, nonAktif: true, blacklist: true });
         const isFilterOpen = ref(false);
         const vendorLegalFilter = ref('ALL');
+        const showDuplicateActiveOnly = ref(false);
+
+        // FIX: dipakai fitur "Cek Vendor Duplikat (Aktif > 1)" — cari perusahaan yang punya
+        // LEBIH DARI 1 baris berstatus Aktif (biasanya artinya data ganda yang belum dirapikan).
+        // Sengaja pakai exact-match (bukan fuzzy) supaya cepat untuk ribuan vendor.
+        const duplicateActiveCompanies = computed(() => {
+          const counts = {};
+          vendors.value.forEach(v => {
+            if ((v.status || 'Aktif') !== 'Aktif') return;
+            const key = cleanCompanyName(v.perusahaan);
+            if (!key) return;
+            counts[key] = (counts[key] || 0) + 1;
+          });
+          return new Set(Object.keys(counts).filter(k => counts[k] > 1));
+        });
+        const duplicateActiveCount = computed(() => duplicateActiveCompanies.value.size);
         
         const isDocModalOpen = ref(false);
         const selectedDocVendor = ref(null);
@@ -2430,6 +2454,15 @@
 
         const filteredVendors = computed(() => {
             const q = searchQuery.value.toLowerCase().trim();
+
+            // Mode khusus: tampilkan SEMUA baris satu-satu (bukan dikelompokkan) untuk
+            // perusahaan yang punya lebih dari 1 status Aktif — supaya gampang dibandingkan & diedit.
+            if (showDuplicateActiveOnly.value) {
+                return vendors.value.filter(v => duplicateActiveCompanies.value.has(cleanCompanyName(v.perusahaan)))
+                    .map(v => ({ ...v, duplicates: [] }))
+                    .sort((a, b) => String(a.perusahaan||'').localeCompare(String(b.perusahaan||'')));
+            }
+
             return cachedDeduplicatedVendors.value.filter(v => {
                 const st = v.status || 'Aktif';
                 if (st === 'Aktif' && !activeFilters.value.aktif) return false;
@@ -2918,11 +2951,15 @@
             document.body.removeChild(textArea);
         };
 
+        const exportOnlyActive = ref(false);
+
         const handleExportExcel = () => {
           const headers = ['PERUSAHAAN', 'BENTUK BADAN', 'PIC', 'SAPAAN', 'EMAIL', 'Nomor Telep', 'No Fax', 'No Handpho', 'JABATAN', 'KETERANG', 'PRODUK', 'STATUS', 'ALAMAT', 'TIMESTAMP FORM', 'STATUS LEGALITAS'];
           const colsStyle = [{ wch: 30 }, { wch: 15 }, { wch: 25 }, { wch: 10 }, { wch: 35 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 25 }, { wch: 30 }, { wch: 10 }, { wch: 40 }, { wch: 15 }, { wch: 15 }];
           
           let rows = selectedRows.value.size > 0 ? vendors.value.filter(v => selectedRows.value.has(v.id)) : [...vendors.value];
+          if (exportOnlyActive.value) rows = rows.filter(v => (v.status || 'Aktif') === 'Aktif');
+          if (rows.length === 0) { showToast("Tidak ada data yang cocok untuk diexport.", "warning"); return; }
           rows.sort((a, b) => {
             let nameA = String(a.perusahaan || '').toLowerCase();
             let nameB = String(b.perusahaan || '').toLowerCase();
@@ -2947,7 +2984,7 @@
           XLSX.utils.book_append_sheet(wb, wsAll, "Semua Data");
 
           XLSX.writeFile(wb, "VendorHub_Export_" + Date.now() + ".xlsx");
-          addLog('EXPORT', `Mengekspor ${rows.length} data vendor ke Excel`);
+          addLog('EXPORT', `Mengekspor ${rows.length} data vendor${exportOnlyActive.value ? ' (status Aktif saja)' : ''} ke Excel`);
           showToast("Berhasil Export Excel!");
         };
 
@@ -3411,6 +3448,7 @@
           currentUser, hasMenuAccess, loginLoading, MENU_ORDER, MENU_LABELS, accessData, expandedRole, isRoleFormOpen, roleForm,
           isUserFormOpen, userForm, openRoleForm, saveRoleForm, confirmDeleteRole, openUserForm, saveUserForm, confirmDeleteUser, isRoleDirty,
           isAllFiltersActive, activeFilters, isFilterOpen, resetFilters, vendorLegalFilter,
+          showDuplicateActiveOnly, duplicateActiveCount, exportOnlyActive,
           isDocModalOpen, selectedDocVendor, openDocModal, docFields, getDocStatus, getDocLink, renderDocBadgeHTML, getComplianceScore,
           isBulkStatusModalOpen, bulkStatusValue, openBulkStatusModal, closeBulkStatusModal, handleBulkUpdateStatus,
           confirmDialog, closeConfirm, executeConfirm, settings, formHeaders, formatDateOnly, isUpdateValid, formatTimeAgo,
